@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --c-ink: #0A0F1E;
+  --c-ink2: #131C30;
+  --c-paper: #F3F5F8;
+  --c-paper2: #EAEDF2;
+  --c-gold: #E2A63D;
+  --c-goldDeep: #C4872A;
+  --c-teal: #1D9488;
+  --c-tealDeep: #146F66;
+  --c-slate: #48505E;
+  --c-slateSoft: #727C8C;
+  --c-line: #E1E4EA;
+  --ts-hero: 4.6rem;
+  --ts-heading: 2.2rem;
+  --ts-title: 3rem;
+  --ts-body: 1.125rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: "Source Serif 4", Georgia, serif;
+  color: var(--c-ink);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 {
+  font-family: Archivo, sans-serif;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -.01em;
+}
+.font-mono-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ---------- Eyebrow ---------- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: .5em;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: .75rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--c-tealDeep);
+}
+.eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 1.5px;
+  background: var(--c-gold);
+  display: inline-block;
+}
+.eyebrow-dark { color: var(--c-gold); }
+
+/* ---------- Reveal on scroll ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .7s var(--ease), transform .7s var(--ease);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ---------- Rotating hero word ---------- */
+.rotate-wrap {
+  display: inline-block;
+  overflow: hidden;
+  height: 1.05em;
+  vertical-align: top;
+  width: 6.6em;
+  max-width: 100%;
+}
+.rotate-word {
+  display: inline-block;
+  color: var(--c-gold);
+  white-space: nowrap;
+  transform-origin: left center;
+}
+.rotate-word.small { font-size: .62em; }
+.rotate-word.out { animation: rotateOut .5s var(--ease) forwards; }
+.rotate-word.in { animation: rotateIn .5s var(--ease) forwards; }
+@keyframes rotateOut { to { transform: translateY(-100%); opacity: 0; } }
+@keyframes rotateIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .rotate-word.out, .rotate-word.in { animation: none; }
+}
+
+/* ---------- Marquee (logo-wall chips) ---------- */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: scroll 26s linear infinite;
+}
+@keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; flex-wrap: wrap; justify-content: center; }
+}
+
+/* ---------- Hero dashboard growth chart ---------- */
+.growth-line {
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: draw 1.2s var(--ease) forwards;
+  transition: d .5s var(--ease);
+}
+.growth-area { transition: d .5s var(--ease); }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .growth-line { stroke-dashoffset: 0; animation: none; }
+}
+
+/* ---------- FAQ (details/summary) ---------- */
+.faq-item summary { list-style: none; cursor: pointer; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item .chev { transition: transform .3s var(--ease), background .3s, border-color .3s; }
+.faq-item[open] .chev { background: var(--c-ink); border-color: var(--c-ink); }
+.faq-item[open] .chev svg { color: #fff; transform: rotate(45deg); }
