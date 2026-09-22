@@ -239,6 +239,21 @@ export default function AdminPage() {
                 onChange={(v) => set(`platforms.${i}.chart`, v.split(',').map((n) => Number(n.trim())).filter((n) => !isNaN(n)))}
               />
               <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                <Field
+                  label="Daily sales range — minimum ($)"
+                  type="number"
+                  value={p.dailyMin ?? 30}
+                  onChange={(v) => set(`platforms.${i}.dailyMin`, Number(v))}
+                />
+                <Field
+                  label="Daily sales range — maximum ($)"
+                  type="number"
+                  value={p.dailyMax ?? 220}
+                  onChange={(v) => set(`platforms.${i}.dailyMax`, Number(v))}
+                />
+              </div>
+              <p className="text-xs text-slateSoft -mt-2">The live chart's daily bars and today's ticking number always stay inside this $ range.</p>
+              <div className="grid sm:grid-cols-2 gap-3 mt-3">
                 <label className="block">
                   <span className="block text-[.8rem] font-display font-semibold mb-1.5">Chart color</span>
                   <div className="flex items-center gap-2">
@@ -256,7 +271,7 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
-          <AddButton label="+ Add platform" onClick={() => addItem('platforms', { key: `platform-${Date.now()}`, name: 'New Platform', listingsOptimized: 0, coachingSessions: '0/mo', chart: [10, 20, 30, 40, 50], color: '#1D9488', colorAlt: '#E2A63D' })} />
+          <AddButton label="+ Add platform" onClick={() => addItem('platforms', { key: `platform-${Date.now()}`, name: 'New Platform', listingsOptimized: 0, coachingSessions: '0/mo', chart: [10, 20, 30, 40, 50], color: '#1D9488', colorAlt: '#E2A63D', dailyMin: 30, dailyMax: 220 })} />
         </SectionCard>
 
         <SectionCard title="What We Do (Home page service cards)">

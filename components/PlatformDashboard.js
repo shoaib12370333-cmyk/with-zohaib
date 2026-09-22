@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Reveal from './Reveal';
 
 const DAYS = 90;
-const BAR_MIN = 30;
-const BAR_MAX = 220;
+const DEFAULT_MIN = 30;
+const DEFAULT_MAX = 220;
 
 // Deterministic pseudo-random in [0,1) so the same day always renders the
 // same bar height on server and client (avoids hydration mismatches) —
@@ -16,13 +16,16 @@ function seeded(seed) {
 
 // Turns a handful of admin-entered checkpoint numbers into a 90-day daily
 // series: interpolated between checkpoints and given light day-to-day
-// texture, landing in a believable per-day sales range for a small store.
-function buildDailySeries(chartValues, platformKey) {
+// texture, kept within the admin-configured [dailyMin, dailyMax] range for
+// this platform so the chart never drifts outside what was set.
+function buildDailySeries(chartValues, platformKey, dailyMin, dailyMax) {
   const values = chartValues && chartValues.length ? chartValues : [10, 20, 30, 40, 50];
   const n = values.length;
   const min = Math.min(...values);
   const max = Math.max(...values, min + 1);
-  const toDollar = (v) => BAR_MIN + ((v - min) / (max - min)) * (BAR_MAX - BAR_MIN);
+  const lo = Number.isFinite(dailyMin) ? dailyMin : DEFAULT_MIN;
+  const hi = Number.isFinite(dailyMax) && dailyMax > lo ? dailyMax : lo + 1;
+  const toDollar = (v) => lo + ((v - min) / (max - min)) * (hi - lo);
   const seedBase = platformKey.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 
   const daily = [];
@@ -33,8 +36,8 @@ function buildDailySeries(chartValues, platformKey) {
     const frac = pos - i0;
     const base = values[i0] + (values[i1] - values[i0]) * frac;
     const dollarBase = toDollar(base);
-    const noise = (seeded(seedBase + i) - 0.5) * dollarBase * 0.3;
-    daily.push(Math.max(8, Math.round(dollarBase + noise)));
+    const noise = (seeded(seedBase + i) - 0.5) * (hi - lo) * 0.15;
+    daily.push(Math.min(hi, Math.max(lo, Math.round(dollarBase + noise))));
   }
   return daily;
 }
@@ -55,22 +58,28 @@ export default function PlatformDashboard({ platforms }) {
   const active = list.find((p) => p.key === activeKey) || list[0];
   const color = active?.color || 'var(--c-teal)';
 
-  const daily = useMemo(() => buildDailySeries(active?.chart, active?.key || 'platform'), [active?.chart, active?.key]);
+  const dailyMin = Number.isFinite(active?.dailyMin) ? active.dailyMin : DEFAULT_MIN;
+  const dailyMax = Number.isFinite(active?.dailyMax) && active.dailyMax > dailyMin ? active.dailyMax : dailyMin + 1;
+  const daily = useMemo(
+    () => buildDailySeries(active?.chart, active?.key || 'platform', dailyMin, dailyMax),
+    [active?.chart, active?.key, dailyMin, dailyMax]
+  );
 
   // "Today" ticks live every ~2s with a small, believable jitter — a real
-  // dashboard's live number nudges slightly, it doesn't leap around.
+  // dashboard's live number nudges slightly, it doesn't leap around — and
+  // always stays inside the admin-configured range for this platform.
   const [liveToday, setLiveToday] = useState(null);
   useEffect(() => {
     setLiveToday(null);
     const base = daily[daily.length - 1];
     const tick = () => {
-      const jitter = (Math.random() - 0.45) * base * 0.1;
-      setLiveToday(Math.max(8, Math.round(base + jitter)));
+      const jitter = (Math.random() - 0.45) * (dailyMax - dailyMin) * 0.12;
+      setLiveToday(Math.min(dailyMax, Math.max(dailyMin, Math.round(base + jitter))));
     };
     tick();
     const id = setInterval(tick, 2000);
     return () => clearInterval(id);
-  }, [daily]);
+  }, [daily, dailyMin, dailyMax]);
 
   const barsRef = useRef(null);
   const [hoverIdx, setHoverIdx] = useState(null);
