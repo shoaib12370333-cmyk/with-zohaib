@@ -211,7 +211,7 @@ export default function AdminPage() {
                   label={`Logo size (${m.logoSize || 64}px) — card stays the same size`}
                   value={m.logoSize || 64}
                   min={24}
-                  max={68}
+                  max={104}
                   onChange={(v) => set(`marqueeItems.${i}.logoSize`, v)}
                 />
               </div>

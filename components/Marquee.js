@@ -1,5 +1,7 @@
-const CARD_W = 160;
-const CARD_H = 96;
+// Logo-only cards are a fixed vertical (portrait) box — narrower and taller
+// than a landscape "box" shape — so the strip reads as a row of tall tiles.
+const CARD_W = 100;
+const CARD_H = 132;
 const CARD_PAD = 14;
 const MAX_LOGO_H = CARD_H - CARD_PAD * 2;
 const MAX_LOGO_W = CARD_W - CARD_PAD * 2;
@@ -27,8 +29,10 @@ export default function Marquee({ label, items, speed = 26 }) {
           return (
             <span
               key={i}
-              style={{ width: CARD_W, height: CARD_H, padding: CARD_PAD }}
-              className="font-display font-extrabold text-[1.1rem] text-ink whitespace-nowrap flex items-center justify-center gap-3 flex-none border-[1.5px] border-line rounded-lg bg-white shadow-sm mr-3 box-border"
+              style={logoOnly ? { width: CARD_W, height: CARD_H, padding: CARD_PAD } : undefined}
+              className={`font-display font-extrabold text-[1.1rem] text-ink whitespace-nowrap flex items-center justify-center gap-3 flex-none border-[1.5px] border-line rounded-lg bg-white shadow-sm mr-3 box-border ${
+                logoOnly ? '' : 'px-8 py-[.7rem] min-w-[160px]'
+              }`}
             >
               {item.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
