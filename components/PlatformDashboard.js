@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import Reveal from './Reveal';
 
 const W = 400;
 const H = 170;
@@ -42,7 +43,7 @@ export default function PlatformDashboard({ platforms }) {
   if (!active) return null;
 
   return (
-    <div className="reveal bg-ink2 border border-lineDark rounded-2xl shadow-cardLg overflow-hidden max-w-[480px] lg:max-w-none">
+    <Reveal className="bg-ink2 border border-lineDark rounded-2xl shadow-cardLg overflow-hidden max-w-[480px] lg:max-w-none">
       <div className="flex items-center justify-between px-[1.1rem] py-[.9rem] border-b border-lineDark">
         <div className="flex gap-[.4rem] flex-wrap">
           {list.map((p) => (
@@ -99,6 +100,6 @@ export default function PlatformDashboard({ platforms }) {
           COACHING SESSIONS <b className="text-white font-semibold">{active.coachingSessions}</b>
         </span>
       </div>
-    </div>
+    </Reveal>
   );
 }
