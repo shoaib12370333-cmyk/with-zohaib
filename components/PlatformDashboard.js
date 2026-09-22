@@ -1,80 +1,92 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Reveal from './Reveal';
 
-const W = 400;
-const H = 200;
-const MARGIN = { top: 10, right: 10, bottom: 22, left: 32 };
-const INNER_W = W - MARGIN.left - MARGIN.right;
-const INNER_H = H - MARGIN.top - MARGIN.bottom;
-const GRID_LINES = 4;
+const DAYS = 90;
+const BAR_MIN = 1000;
+const BAR_MAX = 6000;
 
-function buildChart(values) {
-  const n = values.length;
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const range = Math.max(max - min, 1);
-  const pad = 6;
-  const points = values.map((v, i) => {
-    const x = n > 1 ? (i / (n - 1)) * INNER_W : INNER_W / 2;
-    const norm = (v - min) / range; // 0..1
-    const y = INNER_H - pad - norm * (INNER_H - pad * 2);
-    return [x, y];
-  });
-
-  let line = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)} `;
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x0, y0] = points[i];
-    const [x1, y1] = points[i + 1];
-    const midX = (x0 + x1) / 2;
-    line += `C${midX.toFixed(1)},${y0.toFixed(1)} ${midX.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)} `;
-  }
-  const area = `${line} L${INNER_W},${INNER_H} L0,${INNER_H} Z`;
-  return { line: line.trim(), area, points, min, max };
+// Deterministic pseudo-random in [0,1) so the same day always renders the
+// same bar height on server and client (avoids hydration mismatches) —
+// only "today" (added later via an interval) is genuinely randomized.
+function seeded(seed) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
 }
 
-// Labels each data point with the month it landed in, ending on the current month —
-// so a 12-value series reads as "Oct, Nov, Dec … Sep" instead of unlabeled dots.
-function monthLabels(n) {
-  const now = new Date();
-  const labels = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    labels.push(d.toLocaleString('en-US', { month: 'short' }));
+// Turns a handful of admin-entered checkpoint numbers into a 90-day daily
+// series, interpolated between checkpoints and given light day-to-day
+// texture — landing in the $1,000–$6,000/day range the client asked for.
+function buildDailySeries(chartValues, platformKey) {
+  const values = chartValues && chartValues.length ? chartValues : [10, 20, 30, 40, 50];
+  const n = values.length;
+  const min = Math.min(...values);
+  const max = Math.max(...values, min + 1);
+  const toDollar = (v) => BAR_MIN + ((v - min) / (max - min)) * (BAR_MAX - BAR_MIN);
+  const seedBase = platformKey.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+
+  const daily = [];
+  for (let i = 0; i < DAYS; i++) {
+    const pos = n > 1 ? (i / (DAYS - 1)) * (n - 1) : 0;
+    const i0 = Math.floor(pos);
+    const i1 = Math.min(i0 + 1, n - 1);
+    const frac = pos - i0;
+    const base = values[i0] + (values[i1] - values[i0]) * frac;
+    const dollarBase = toDollar(base);
+    const noise = (seeded(seedBase + i) - 0.5) * dollarBase * 0.5;
+    daily.push(Math.max(150, Math.round(dollarBase + noise)));
   }
-  return labels;
+  return daily;
+}
+
+function dateLabel(daysAgo) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function fmtMoney(n) {
+  return `$${Math.round(n).toLocaleString('en-US')}`;
 }
 
 export default function PlatformDashboard({ platforms }) {
   const list = platforms && platforms.length ? platforms : [];
   const [activeKey, setActiveKey] = useState(list[2]?.key || list[0]?.key);
   const active = list.find((p) => p.key === activeKey) || list[0];
-  const svgRef = useRef(null);
-  const [hoverIdx, setHoverIdx] = useState(null);
-
   const color = active?.color || 'var(--c-teal)';
-  const colorAlt = active?.colorAlt || 'var(--c-gold)';
-  const values = active?.chart?.length ? active.chart : [10, 20, 30, 40, 50];
-  const { line, area, points, min, max } = useMemo(() => buildChart(values), [values]);
-  const labels = useMemo(() => monthLabels(values.length), [values.length]);
-  const showEveryLabel = values.length <= 8;
 
-  function updateHoverFromClientX(clientX) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const xInSvg = ((clientX - rect.left) / rect.width) * W;
-    const ratio = Math.min(1, Math.max(0, (xInSvg - MARGIN.left) / INNER_W));
-    const idx = values.length > 1 ? Math.round(ratio * (values.length - 1)) : 0;
-    setHoverIdx(idx);
-  }
+  const daily = useMemo(() => buildDailySeries(active?.chart, active?.key || 'platform'), [active?.chart, active?.key]);
+
+  // "Today" ticks live every 1.5s with a small random jitter, purely a
+  // visual effect — everything else in the 90-day history stays fixed so
+  // the chart doesn't visibly reshuffle, only the most recent bar does.
+  const [liveToday, setLiveToday] = useState(null);
+  useEffect(() => {
+    setLiveToday(null);
+    const base = daily[daily.length - 1];
+    const tick = () => {
+      const jitter = (Math.random() - 0.4) * base * 0.35;
+      setLiveToday(Math.max(150, Math.round(base + jitter)));
+    };
+    tick();
+    const id = setInterval(tick, 1500);
+    return () => clearInterval(id);
+  }, [daily]);
 
   if (!active) return null;
 
-  const hoverPoint = hoverIdx != null ? points[hoverIdx] : null;
-  const hoverValue = hoverIdx != null ? values[hoverIdx] : null;
-  const tooltipW = 62;
-  const tooltipX = hoverPoint ? Math.min(Math.max(hoverPoint[0] - tooltipW / 2, 0), INNER_W - tooltipW) : 0;
+  const series = liveToday != null ? [...daily.slice(0, -1), liveToday] : daily;
+  const sum = (arr) => arr.reduce((a, b) => a + b, 0);
+
+  const today = series[series.length - 1];
+  const last7 = sum(series.slice(-7));
+  const last31 = sum(series.slice(-31));
+  const last90 = sum(series);
+  const prev31 = sum(daily.slice(-62, -31));
+  const pctChange = prev31 > 0 ? Math.abs(((last31 - prev31) / prev31) * 100) : 0;
+
+  const maxBar = Math.max(...series, 1);
+  const yTicks = [1, 0.5, 0];
 
   return (
     <Reveal className="bg-ink2 border border-lineDark rounded-2xl shadow-cardLg overflow-hidden max-w-[480px] lg:max-w-none">
@@ -93,100 +105,78 @@ export default function PlatformDashboard({ platforms }) {
             </button>
           ))}
         </div>
-        <div className="flex gap-[5px]">
-          <i className="w-[7px] h-[7px] rounded-full bg-[#33405C] block" />
-          <i className="w-[7px] h-[7px] rounded-full bg-[#33405C] block" />
-          <i className="w-[7px] h-[7px] rounded-full bg-[#33405C] block" />
-        </div>
+        <span className="flex items-center gap-1 text-[#5C6788]">
+          <i className="w-[6px] h-[6px] rounded-full block animate-pulse" style={{ backgroundColor: color }} />
+          <span className="font-mono-eyebrow text-[.6rem] tracking-[.08em]">LIVE</span>
+        </span>
       </div>
 
-      <div className="px-[1.1rem] pt-[1.3rem] pb-4">
-        <div className="flex justify-between items-end mb-[.6rem]">
+      <div className="px-[1.1rem] pt-[1.2rem] pb-1">
+        <div className="flex justify-between items-end mb-[.9rem]">
           <div>
-            <span className="block font-mono-eyebrow text-[.64rem] tracking-[.1em] text-[#7B8499]">STORE STATUS</span>
-            <span className="block font-display font-bold text-[1.3rem] mt-[.15rem]" style={{ color }}>Growing ↑</span>
+            <span className="block font-display font-bold text-[1.05rem] text-white">Sales</span>
+            <span className="block font-mono-eyebrow text-[.62rem] tracking-[.05em] text-[#7B8499] mt-[.15rem]">
+              {active.name} · last 90 days
+            </span>
           </div>
           <span className="font-mono-eyebrow text-[.66rem] text-gold border border-gold/40 px-[.6em] py-[.3em] rounded-full">
-            {values.length}-MONTH VIEW
+            90-DAY VIEW
           </span>
         </div>
 
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          className="w-full h-auto block touch-none"
-          key={active.key}
-          onMouseMove={(e) => updateHoverFromClientX(e.clientX)}
-          onMouseLeave={() => setHoverIdx(null)}
-          onTouchStart={(e) => updateHoverFromClientX(e.touches[0].clientX)}
-          onTouchMove={(e) => updateHoverFromClientX(e.touches[0].clientX)}
-          onTouchEnd={() => setHoverIdx(null)}
-        >
-          <defs>
-            <linearGradient id={`growthFill-${active.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity="0.4" />
-              <stop offset="100%" stopColor={color} stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id={`growthStroke-${active.key}`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={color} />
-              <stop offset="100%" stopColor={colorAlt} />
-            </linearGradient>
-          </defs>
-
-          <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
-            {Array.from({ length: GRID_LINES + 1 }, (_, i) => {
-              const y = (INNER_H / GRID_LINES) * i;
-              const value = Math.round(max - ((max - min) / GRID_LINES) * i);
-              return (
-                <g key={i}>
-                  <line x1={0} y1={y} x2={INNER_W} y2={y} stroke="#2A3450" strokeWidth="1" strokeDasharray={i === GRID_LINES ? '0' : '3,4'} />
-                  <text x={-8} y={y} textAnchor="end" dominantBaseline="middle" className="fill-[#5C6788]" style={{ fontSize: 8 }}>
-                    {value}
-                  </text>
-                </g>
-              );
-            })}
-
-            {labels.map((lab, i) => {
-              if (!showEveryLabel && i % 2 !== 0 && i !== labels.length - 1) return null;
-              return (
-                <text
-                  key={i}
-                  x={points[i][0]}
-                  y={INNER_H + 14}
-                  textAnchor="middle"
-                  className="fill-[#5C6788]"
-                  style={{ fontSize: 8 }}
-                >
-                  {lab}
-                </text>
-              );
-            })}
-
-            <path className="growth-area" d={area} fill={`url(#growthFill-${active.key})`} />
-            <path className="growth-line" d={line} fill="none" stroke={`url(#growthStroke-${active.key})`} strokeWidth="2.5" strokeLinecap="round" />
-
-            {points.map(([x, y], i) => (
-              <circle key={i} cx={x} cy={y} r={i === hoverIdx ? 4 : 2} fill={i === hoverIdx ? colorAlt : color} opacity={i === hoverIdx ? 1 : 0.55} />
-            ))}
-
-            {hoverPoint && (
-              <>
-                <line x1={hoverPoint[0]} y1={0} x2={hoverPoint[0]} y2={INNER_H} stroke="#5C6788" strokeWidth="1" strokeDasharray="2,3" />
-                <circle cx={hoverPoint[0]} cy={hoverPoint[1]} r="5" fill={colorAlt} stroke="#0B1220" strokeWidth="1.5" />
-                <g transform={`translate(${tooltipX},${Math.max(hoverPoint[1] - 34, 0)})`}>
-                  <rect width={tooltipW} height={22} rx={5} fill="#0B1220" stroke="#33405C" />
-                  <text x={tooltipW / 2} y={11} textAnchor="middle" className="fill-white font-semibold" style={{ fontSize: 9 }}>
-                    {labels[hoverIdx]} · {hoverValue}
-                  </text>
-                </g>
-              </>
-            )}
-          </g>
-        </svg>
+        <div className="flex items-end gap-[3px] h-[110px] relative">
+          {yTicks.map((t) => (
+            <div key={t} className="absolute left-0 right-0 border-t border-dashed border-[#2A3450]" style={{ bottom: `${t * 100}%` }} />
+          ))}
+          {series.map((v, i) => {
+            const isToday = i === series.length - 1;
+            const h = Math.max(2, (v / maxBar) * 100);
+            return (
+              <div
+                key={i}
+                className="flex-1 rounded-t-[1px]"
+                style={{
+                  height: `${h}%`,
+                  backgroundColor: color,
+                  opacity: isToday ? 1 : 0.45 + (i / series.length) * 0.4,
+                  transition: isToday ? 'height 0.5s ease' : undefined,
+                }}
+              />
+            );
+          })}
+        </div>
+        <div className="flex justify-between mt-[.35rem]">
+          {[89, 67, 45, 22, 0].map((daysAgo) => (
+            <span key={daysAgo} className="font-mono-eyebrow text-[.58rem] text-[#5C6788]">
+              {dateLabel(daysAgo)}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <div className="flex justify-between px-[1.1rem] py-[.9rem] border-t border-lineDark">
+      <div className="px-[1.1rem] pb-2 mt-2">
+        <div className="flex justify-between items-center py-[.55rem] border-t border-lineDark">
+          <span className="font-mono-eyebrow text-[.66rem] text-[#9FA8BA]">Today</span>
+          <span className="font-display font-bold text-white text-[.92rem] tabular-nums">{fmtMoney(today)}</span>
+        </div>
+        <div className="flex justify-between items-center py-[.55rem] border-t border-lineDark">
+          <span className="font-mono-eyebrow text-[.66rem] text-[#9FA8BA]">Last 7 days</span>
+          <span className="font-display font-bold text-white text-[.92rem] tabular-nums">{fmtMoney(last7)}</span>
+        </div>
+        <div className="flex justify-between items-center py-[.55rem] border-t border-lineDark">
+          <span className="flex items-center gap-2 font-mono-eyebrow text-[.66rem] text-[#9FA8BA]">
+            Last 31 days
+            <span className="flex items-center gap-[.2em] text-teal font-semibold">▲ {pctChange.toFixed(1)}%</span>
+          </span>
+          <span className="font-display font-bold text-white text-[.92rem] tabular-nums">{fmtMoney(last31)}</span>
+        </div>
+        <div className="flex justify-between items-center py-[.55rem] border-t border-b border-lineDark">
+          <span className="font-mono-eyebrow text-[.66rem] text-[#9FA8BA]">Last 90 days</span>
+          <span className="font-display font-bold text-white text-[.92rem] tabular-nums">{fmtMoney(last90)}</span>
+        </div>
+      </div>
+
+      <div className="flex justify-between px-[1.1rem] py-[.9rem]">
         <span className="font-mono-eyebrow text-[.64rem] text-[#7B8499]">
           LISTINGS OPTIMIZED <b className="text-white font-semibold">{active.listingsOptimized}</b>
         </span>
