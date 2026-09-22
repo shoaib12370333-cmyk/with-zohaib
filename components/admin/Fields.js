@@ -87,6 +87,40 @@ export function ImageField({ label, value, onChange, uploading, onUpload }) {
   );
 }
 
+export function RangeField({ label, value, onChange, min = 0, max = 100, step = 1 }) {
+  return (
+    <label className="block mt-3">
+      <span className="block text-[.8rem] font-display font-semibold mb-1.5">{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value ?? min}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-teal"
+      />
+    </label>
+  );
+}
+
+export function SelectField({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <span className="block text-[.8rem] font-display font-semibold mb-1.5">{label}</span>
+      <select
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3.5 py-2.5 border border-line rounded-lg bg-paper focus:bg-white focus:border-teal outline-none text-[.92rem]"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function RemoveButton({ onClick }) {
   return (
     <button type="button" onClick={onClick} className="text-red-600 text-xs font-display font-semibold hover:underline">

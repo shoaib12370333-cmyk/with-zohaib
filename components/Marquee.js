@@ -13,6 +13,7 @@ export default function Marquee({ label, items, speed = 26 }) {
         {repeated.map((item, i) => {
           const hasName = item.name && item.name.trim().length > 0;
           const logoOnly = item.logoUrl && !hasName;
+          const logoSize = item.logoSize || (logoOnly ? 64 : 24);
           return (
             <span
               key={i}
@@ -20,7 +21,12 @@ export default function Marquee({ label, items, speed = 26 }) {
             >
               {item.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.logoUrl} alt={item.name || ''} className={logoOnly ? 'h-16 w-auto max-w-[150px] object-contain flex-none mx-auto' : 'w-6 h-6 object-contain flex-none'} />
+                <img
+                  src={item.logoUrl}
+                  alt={item.name || ''}
+                  className="w-auto object-contain flex-none mx-auto"
+                  style={{ height: `${logoSize}px`, maxWidth: `${logoSize * 2.3}px` }}
+                />
               )}
               {hasName && item.name}
             </span>

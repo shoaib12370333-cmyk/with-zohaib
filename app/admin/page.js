@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SectionCard, Field, TextArea, ListTextArea, ImageField, RemoveButton, AddButton } from '@/components/admin/Fields';
+import { SectionCard, Field, TextArea, ListTextArea, ImageField, RangeField, SelectField, RemoveButton, AddButton } from '@/components/admin/Fields';
 import AdminNav from '@/components/admin/AdminNav';
 
 function setPath(obj, path, value) {
@@ -175,6 +175,29 @@ export default function AdminPage() {
           </div>
           <ListTextArea label="Trust checkmarks" items={content.hero.trust} onChange={(v) => set('hero.trust', v)} rows={3} />
           <ImageField label="Side photo (shows behind the live chart card — leave empty to show just the chart)" value={content.hero.sideImageUrl} uploading={uploading} onUpload={handleUpload} onChange={(url) => set('hero.sideImageUrl', url)} />
+          {content.hero.sideImageUrl && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              <SelectField
+                label="Photo fit (Cover fills the frame and may crop; Contain shows the whole photo)"
+                value={content.hero.sideImageFit || 'cover'}
+                onChange={(v) => set('hero.sideImageFit', v)}
+                options={[
+                  { value: 'cover', label: 'Cover (fill frame, may crop)' },
+                  { value: 'contain', label: 'Contain (show whole photo)' },
+                ]}
+              />
+              <SelectField
+                label="Photo position (which part stays visible when cropped)"
+                value={content.hero.sideImagePosition || 'top'}
+                onChange={(v) => set('hero.sideImagePosition', v)}
+                options={[
+                  { value: 'top', label: 'Top' },
+                  { value: 'center', label: 'Center' },
+                  { value: 'bottom', label: 'Bottom' },
+                ]}
+              />
+            </div>
+          )}
         </SectionCard>
 
         <SectionCard title="Trust Marquee" subtitle="The scrolling strip of platform names right under the hero">
@@ -184,11 +207,18 @@ export default function AdminPage() {
               <ImageField label="Logo (optional)" value={m.logoUrl} uploading={uploading} onUpload={handleUpload} onChange={(url) => set(`marqueeItems.${i}.logoUrl`, url)} />
               <div className="flex-1">
                 <Field label="Name (leave empty to show just the logo, no text)" value={m.name} onChange={(v) => set(`marqueeItems.${i}.name`, v)} />
+                <RangeField
+                  label={`Logo size (${m.logoSize || 64}px)`}
+                  value={m.logoSize || 64}
+                  min={24}
+                  max={120}
+                  onChange={(v) => set(`marqueeItems.${i}.logoSize`, v)}
+                />
               </div>
               <RemoveButton onClick={() => removeItem('marqueeItems', i)} />
             </div>
           ))}
-          <AddButton label="+ Add marquee item" onClick={() => addItem('marqueeItems', { name: 'New', logoUrl: '' })} />
+          <AddButton label="+ Add marquee item" onClick={() => addItem('marqueeItems', { name: 'New', logoUrl: '', logoSize: 64 })} />
         </SectionCard>
 
         <SectionCard title="Platforms & Live Chart" subtitle="Tabs in the hero dashboard — click a tab on the live site to see its chart">

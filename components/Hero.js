@@ -86,7 +86,13 @@ export default function Hero({ hero, platforms, founder, brandAvatar, showFounde
             <div className="relative">
               <div className="rounded-2xl overflow-hidden shadow-cardLg aspect-[4/3] sm:aspect-[4/3.6]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={hero.sideImageUrl} alt="" className="w-full h-full object-cover object-top" draggable="false" />
+                <img
+                  src={hero.sideImageUrl}
+                  alt=""
+                  className="w-full h-full"
+                  style={{ objectFit: hero.sideImageFit || 'cover', objectPosition: hero.sideImagePosition || 'top' }}
+                  draggable="false"
+                />
               </div>
               <div className="mt-6 lg:mt-[-4.5rem] lg:mr-[-1.5rem] lg:ml-16 relative">
                 <PlatformDashboard platforms={platforms} />
