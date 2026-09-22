@@ -6,6 +6,16 @@ const DAYS = 90;
 const DEFAULT_MIN = 30;
 const DEFAULT_MAX = 220;
 
+// Falls back to each platform's real brand color when older saved admin
+// content doesn't have a "color" field yet (added after some sites' data
+// was already saved), instead of every bar defaulting to the same teal.
+const BRAND_COLORS = {
+  ebay: '#0654BA',
+  amazon: '#FF9900',
+  shopify: '#95BF47',
+  tiktokshop: '#FE2C55',
+};
+
 // Deterministic pseudo-random in [0,1) so the same day always renders the
 // same bar height on server and client (avoids hydration mismatches) —
 // only "today" (added later via an interval) is genuinely randomized.
@@ -24,7 +34,7 @@ function buildDailySeries(chartValues, platformKey, dailyMin, dailyMax) {
   const min = Math.min(...values);
   const max = Math.max(...values, min + 1);
   const lo = Number.isFinite(dailyMin) ? dailyMin : DEFAULT_MIN;
-  const hi = Number.isFinite(dailyMax) && dailyMax > lo ? dailyMax : lo + 1;
+  const hi = Number.isFinite(dailyMax) && dailyMax > lo ? dailyMax : Math.max(DEFAULT_MAX, lo + 1);
   const toDollar = (v) => lo + ((v - min) / (max - min)) * (hi - lo);
   const seedBase = platformKey.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 
@@ -56,10 +66,10 @@ export default function PlatformDashboard({ platforms }) {
   const list = platforms && platforms.length ? platforms : [];
   const [activeKey, setActiveKey] = useState(list[2]?.key || list[0]?.key);
   const active = list.find((p) => p.key === activeKey) || list[0];
-  const color = active?.color || 'var(--c-teal)';
+  const color = active?.color || BRAND_COLORS[active?.key] || 'var(--c-teal)';
 
   const dailyMin = Number.isFinite(active?.dailyMin) ? active.dailyMin : DEFAULT_MIN;
-  const dailyMax = Number.isFinite(active?.dailyMax) && active.dailyMax > dailyMin ? active.dailyMax : dailyMin + 1;
+  const dailyMax = Number.isFinite(active?.dailyMax) && active.dailyMax > dailyMin ? active.dailyMax : Math.max(DEFAULT_MAX, dailyMin + 1);
   const daily = useMemo(
     () => buildDailySeries(active?.chart, active?.key || 'platform', dailyMin, dailyMax),
     [active?.chart, active?.key, dailyMin, dailyMax]
@@ -116,7 +126,7 @@ export default function PlatformDashboard({ platforms }) {
             <button
               key={p.key}
               onClick={() => setActiveKey(p.key)}
-              style={p.key === activeKey ? { backgroundColor: p.color || 'var(--c-teal)' } : undefined}
+              style={p.key === activeKey ? { backgroundColor: p.color || BRAND_COLORS[p.key] || 'var(--c-teal)' } : undefined}
               className={`font-mono-eyebrow text-[.68rem] tracking-[.03em] px-[.7em] py-[.35em] rounded-full transition-colors ${
                 p.key === activeKey ? 'text-white' : 'text-[#8B93A6] hover:text-white'
               }`}
