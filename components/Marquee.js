@@ -1,8 +1,8 @@
-// Logo-only cards are a fixed vertical (portrait) box — narrower and taller
-// than a landscape "box" shape — so the strip reads as a row of tall tiles.
-const CARD_W = 100;
-const CARD_H = 132;
-const CARD_PAD = 14;
+// Logo-only cards are a fixed horizontal (landscape) box, smaller than the
+// original 160x96 size so the strip reads as a row of compact tiles.
+const CARD_W = 120;
+const CARD_H = 76;
+const CARD_PAD = 12;
 const MAX_LOGO_H = CARD_H - CARD_PAD * 2;
 const MAX_LOGO_W = CARD_W - CARD_PAD * 2;
 
@@ -24,7 +24,7 @@ export default function Marquee({ label, items, speed = 26 }) {
           // The card size never changes — the logo size slider only controls
           // how much of that fixed card the logo fills (capped at the card's
           // padded content area so it can never grow the box).
-          const requestedLogoH = item.logoSize || (logoOnly ? 64 : 24);
+          const requestedLogoH = item.logoSize || (logoOnly ? 48 : 24);
           const logoH = Math.min(requestedLogoH, MAX_LOGO_H);
           return (
             <span
