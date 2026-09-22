@@ -20,7 +20,7 @@ export default function Marquee({ label, items, speed = 26 }) {
             >
               {item.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.logoUrl} alt={item.name || ''} className={logoOnly ? 'w-9 h-9 object-contain flex-none mx-auto' : 'w-6 h-6 object-contain flex-none'} />
+                <img src={item.logoUrl} alt={item.name || ''} className={logoOnly ? 'h-11 w-auto max-w-[150px] object-contain flex-none mx-auto' : 'w-6 h-6 object-contain flex-none'} />
               )}
               {hasName && item.name}
             </span>
