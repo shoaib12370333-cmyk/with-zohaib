@@ -52,6 +52,8 @@ export default function PlatformDashboard({ platforms }) {
   const svgRef = useRef(null);
   const [hoverIdx, setHoverIdx] = useState(null);
 
+  const color = active?.color || 'var(--c-teal)';
+  const colorAlt = active?.colorAlt || 'var(--c-gold)';
   const values = active?.chart?.length ? active.chart : [10, 20, 30, 40, 50];
   const { line, area, points, min, max } = useMemo(() => buildChart(values), [values]);
   const labels = useMemo(() => monthLabels(values.length), [values.length]);
@@ -82,8 +84,9 @@ export default function PlatformDashboard({ platforms }) {
             <button
               key={p.key}
               onClick={() => setActiveKey(p.key)}
+              style={p.key === activeKey ? { backgroundColor: p.color || 'var(--c-teal)' } : undefined}
               className={`font-mono-eyebrow text-[.68rem] tracking-[.03em] px-[.7em] py-[.35em] rounded-full transition-colors ${
-                p.key === activeKey ? 'bg-teal text-white' : 'text-[#8B93A6] hover:text-white'
+                p.key === activeKey ? 'text-white' : 'text-[#8B93A6] hover:text-white'
               }`}
             >
               {p.name}
@@ -101,7 +104,7 @@ export default function PlatformDashboard({ platforms }) {
         <div className="flex justify-between items-end mb-[.6rem]">
           <div>
             <span className="block font-mono-eyebrow text-[.64rem] tracking-[.1em] text-[#7B8499]">STORE STATUS</span>
-            <span className="block font-display font-bold text-[1.3rem] text-teal mt-[.15rem]">Growing ↑</span>
+            <span className="block font-display font-bold text-[1.3rem] mt-[.15rem]" style={{ color }}>Growing ↑</span>
           </div>
           <span className="font-mono-eyebrow text-[.66rem] text-gold border border-gold/40 px-[.6em] py-[.3em] rounded-full">
             {values.length}-MONTH VIEW
@@ -120,13 +123,13 @@ export default function PlatformDashboard({ platforms }) {
           onTouchEnd={() => setHoverIdx(null)}
         >
           <defs>
-            <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--c-teal)" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="var(--c-teal)" stopOpacity="0" />
+            <linearGradient id={`growthFill-${active.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
             </linearGradient>
-            <linearGradient id="growthStroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--c-teal)" />
-              <stop offset="100%" stopColor="var(--c-gold)" />
+            <linearGradient id={`growthStroke-${active.key}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={color} />
+              <stop offset="100%" stopColor={colorAlt} />
             </linearGradient>
           </defs>
 
@@ -160,17 +163,17 @@ export default function PlatformDashboard({ platforms }) {
               );
             })}
 
-            <path className="growth-area" d={area} fill="url(#growthFill)" />
-            <path className="growth-line" d={line} fill="none" stroke="url(#growthStroke)" strokeWidth="2.5" strokeLinecap="round" />
+            <path className="growth-area" d={area} fill={`url(#growthFill-${active.key})`} />
+            <path className="growth-line" d={line} fill="none" stroke={`url(#growthStroke-${active.key})`} strokeWidth="2.5" strokeLinecap="round" />
 
             {points.map(([x, y], i) => (
-              <circle key={i} cx={x} cy={y} r={i === hoverIdx ? 4 : 2} fill={i === hoverIdx ? 'var(--c-gold)' : 'var(--c-teal)'} opacity={i === hoverIdx ? 1 : 0.55} />
+              <circle key={i} cx={x} cy={y} r={i === hoverIdx ? 4 : 2} fill={i === hoverIdx ? colorAlt : color} opacity={i === hoverIdx ? 1 : 0.55} />
             ))}
 
             {hoverPoint && (
               <>
                 <line x1={hoverPoint[0]} y1={0} x2={hoverPoint[0]} y2={INNER_H} stroke="#5C6788" strokeWidth="1" strokeDasharray="2,3" />
-                <circle cx={hoverPoint[0]} cy={hoverPoint[1]} r="5" fill="var(--c-gold)" stroke="#0B1220" strokeWidth="1.5" />
+                <circle cx={hoverPoint[0]} cy={hoverPoint[1]} r="5" fill={colorAlt} stroke="#0B1220" strokeWidth="1.5" />
                 <g transform={`translate(${tooltipX},${Math.max(hoverPoint[1] - 34, 0)})`}>
                   <rect width={tooltipW} height={22} rx={5} fill="#0B1220" stroke="#33405C" />
                   <text x={tooltipW / 2} y={11} textAnchor="middle" className="fill-white font-semibold" style={{ fontSize: 9 }}>

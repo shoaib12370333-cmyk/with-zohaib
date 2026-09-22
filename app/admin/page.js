@@ -238,9 +238,25 @@ export default function AdminPage() {
                 value={(p.chart || []).join(', ')}
                 onChange={(v) => set(`platforms.${i}.chart`, v.split(',').map((n) => Number(n.trim())).filter((n) => !isNaN(n)))}
               />
+              <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                <label className="block">
+                  <span className="block text-[.8rem] font-display font-semibold mb-1.5">Chart color</span>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={p.color || '#1D9488'} onChange={(e) => set(`platforms.${i}.color`, e.target.value)} className="w-10 h-9 rounded border border-line bg-paper" />
+                    <span className="text-xs text-slateSoft">{p.color || '#1D9488'}</span>
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="block text-[.8rem] font-display font-semibold mb-1.5">Chart accent color (gradient end)</span>
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={p.colorAlt || '#E2A63D'} onChange={(e) => set(`platforms.${i}.colorAlt`, e.target.value)} className="w-10 h-9 rounded border border-line bg-paper" />
+                    <span className="text-xs text-slateSoft">{p.colorAlt || '#E2A63D'}</span>
+                  </div>
+                </label>
+              </div>
             </div>
           ))}
-          <AddButton label="+ Add platform" onClick={() => addItem('platforms', { key: `platform-${Date.now()}`, name: 'New Platform', listingsOptimized: 0, coachingSessions: '0/mo', chart: [10, 20, 30, 40, 50] })} />
+          <AddButton label="+ Add platform" onClick={() => addItem('platforms', { key: `platform-${Date.now()}`, name: 'New Platform', listingsOptimized: 0, coachingSessions: '0/mo', chart: [10, 20, 30, 40, 50], color: '#1D9488', colorAlt: '#E2A63D' })} />
         </SectionCard>
 
         <SectionCard title="What We Do (Home page service cards)">
