@@ -16,11 +16,11 @@ export default function Marquee({ label, items, speed = 26 }) {
           return (
             <span
               key={i}
-              className="font-display font-extrabold text-[1.1rem] text-ink whitespace-nowrap flex items-center justify-center gap-3 px-8 py-[1.05rem] min-w-[160px] border-[1.5px] border-line rounded-lg bg-white shadow-sm mr-3"
+              className="font-display font-extrabold text-[1.1rem] text-ink whitespace-nowrap flex items-center justify-center gap-3 px-8 py-[.7rem] min-w-[160px] border-[1.5px] border-line rounded-lg bg-white shadow-sm mr-3"
             >
               {item.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.logoUrl} alt={item.name || ''} className={logoOnly ? 'h-11 w-auto max-w-[150px] object-contain flex-none mx-auto' : 'w-6 h-6 object-contain flex-none'} />
+                <img src={item.logoUrl} alt={item.name || ''} className={logoOnly ? 'h-16 w-auto max-w-[150px] object-contain flex-none mx-auto' : 'w-6 h-6 object-contain flex-none'} />
               )}
               {hasName && item.name}
             </span>
