@@ -208,10 +208,10 @@ export default function AdminPage() {
               <div className="flex-1">
                 <Field label="Name (leave empty to show just the logo, no text)" value={m.name} onChange={(v) => set(`marqueeItems.${i}.name`, v)} />
                 <RangeField
-                  label={`Logo size (${m.logoSize || 64}px)`}
+                  label={`Logo size (${m.logoSize || 64}px) — card stays the same size`}
                   value={m.logoSize || 64}
                   min={24}
-                  max={120}
+                  max={68}
                   onChange={(v) => set(`marqueeItems.${i}.logoSize`, v)}
                 />
               </div>
