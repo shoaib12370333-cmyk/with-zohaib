@@ -58,6 +58,19 @@ function dateLabel(daysAgo) {
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// The last 4 calendar months ending on the current one — e.g. Jun, Jul,
+// Aug, Sep — so the x-axis reads as distinct months instead of two labels
+// both landing in the same month (which looked like it was "stuck").
+function last4Months() {
+  const now = new Date();
+  const months = [];
+  for (let i = 3; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(d.toLocaleString('en-US', { month: 'short' }));
+  }
+  return months;
+}
+
 function fmtMoney(n) {
   return `$${Math.round(n).toLocaleString('en-US')}`;
 }
@@ -196,9 +209,9 @@ export default function PlatformDashboard({ platforms }) {
           )}
         </div>
         <div className="flex justify-between mt-[.4rem]">
-          {[89, 67, 45, 22, 0].map((daysAgo) => (
-            <span key={daysAgo} className="font-mono-eyebrow text-[.58rem] text-[#5C6788]">
-              {dateLabel(daysAgo)}
+          {last4Months().map((label, i) => (
+            <span key={i} className="font-mono-eyebrow text-[.6rem] tracking-[.05em] text-[#5C6788]">
+              {label}
             </span>
           ))}
         </div>
