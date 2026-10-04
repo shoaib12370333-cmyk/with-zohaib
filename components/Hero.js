@@ -1,143 +1,144 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Icon from './Icons';
+import PlatformDashboard from './PlatformDashboard';
 
+const CYCLE_MS = 2600; // one platform name per cycle
+const SWAP_MS = 560; // ≈ the .rotator transition, so the old word is gone before the new one rises
+
+// Hero-only keyframes. Pure CSS (no JS needed), so the entrance also plays with
+// scripts disabled; prefers-reduced-motion is collapsed by the global rule.
+const HERO_CSS = `
+.hero-line{display:block;overflow:hidden;padding:.06em 0 .14em;margin:-.06em 0 -.14em}
+.hero-line>span{display:block;transform-origin:left bottom;animation:heroLine 1.05s var(--ease) both;animation-delay:var(--d,0ms)}
+.hero-card{animation:heroCard 1.15s var(--ease) both;animation-delay:var(--d,0ms)}
+.hero-wipe{animation:heroWipe 1.25s var(--ease) both;animation-delay:var(--d,0ms)}
+.hero-zoom{animation:heroZoom 1.7s var(--ease) both;animation-delay:var(--d,0ms)}
+@keyframes heroLine{from{transform:translate3d(0,112%,0) rotate(2.5deg)}to{transform:none}}
+@keyframes heroCard{from{opacity:0;transform:translate3d(48px,28px,0) scale(.95)}to{opacity:1;transform:none}}
+@keyframes heroWipe{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(-60px)}}
+@keyframes heroZoom{from{transform:scale(1.14)}to{transform:none}}
+`;
+
+// The rotating platform word. The old word slides up out of a mask and the next
+// one rises into it; an invisible copy of the longest word reserves the width so
+// the headline never reflows between swaps.
 function Rotator({ words }) {
   const [idx, setIdx] = useState(0);
   const [state, setState] = useState('in'); // in | out | next
 
   useEffect(() => {
-    if (words.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let t1;
-    let t2;
+    if (words.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let swap = 0;
+    let r1 = 0;
+    let r2 = 0;
     const id = setInterval(() => {
       setState('out');
-      t1 = setTimeout(() => {
+      swap = setTimeout(() => {
         setIdx((i) => (i + 1) % words.length);
-        setState('next');
-        t2 = setTimeout(() => setState('in'), 30);
-      }, 520);
-    }, 2600);
-    return () => { clearInterval(id); clearTimeout(t1); clearTimeout(t2); };
+        setState('next'); // park the new word below the mask (no transition)…
+        // …and only slide it up after the browser has painted that start position
+        r1 = requestAnimationFrame(() => { r2 = requestAnimationFrame(() => setState('in')); });
+      }, SWAP_MS);
+    }, CYCLE_MS);
+    return () => { clearInterval(id); clearTimeout(swap); cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
   }, [words.length]);
 
+  const longest = words.reduce((a, b) => (b.length > a.length ? b : a), '');
   return (
-    <span className="rotator" aria-live="polite">
-      {/* invisible sizer = longest word, so the layout never jumps */}
-      <span aria-hidden="true" className="invisible">{words.reduce((a, b) => (b.length > a.length ? b : a), '')}</span>
-      <span data-state={state} className="grad-text">{words[idx]}</span>
-    </span>
+    <>
+      {/* The animated word is decorative; screen readers get the full list once instead of a live-region chatter. */}
+      <span className="sr-only">{words.join(', ')}</span>
+      <span className="rotator" aria-hidden="true">
+        {/* width reserver: the text lives in a pseudo-element so it never doubles up in the heading's text */}
+        <span data-w={longest} className="invisible whitespace-nowrap after:content-[attr(data-w)]" />
+        <span data-state={state} className="grad-text whitespace-nowrap">{words[idx]}</span>
+      </span>
+    </>
   );
 }
 
-export default function Hero({ hero, platforms, brand, founder, hasAnnouncement }) {
-  const words = platforms?.length ? platforms.map((p) => p.name) : ['eBay'];
-  const wrapRef = useRef(null);
-
-  // Subtle 3D tilt on the visual (desktop pointers only).
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const onMove = (e) => {
-      const r = el.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5;
-      const y = (e.clientY - r.top) / r.height - 0.5;
-      el.style.transform = `perspective(1100px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
-    };
-    const onLeave = () => { el.style.transform = ''; };
-    const parent = el.parentElement;
-    parent.addEventListener('pointermove', onMove);
-    parent.addEventListener('pointerleave', onLeave);
-    return () => { parent.removeEventListener('pointermove', onMove); parent.removeEventListener('pointerleave', onLeave); };
-  }, []);
-
-  const orbit = platforms?.slice(0, 4) || [];
+export default function Hero({ hero, platforms, founder, hasAnnouncement, showDashboard = true, dashboard }) {
+  const list = Array.isArray(platforms) ? platforms : [];
+  const words = list.length ? list.map((p) => p.name) : ['eBay'];
+  const hasImage = !!hero.sideImageUrl;
+  const hasCard = !hasImage && showDashboard && list.length > 0;
+  const hasRight = hasImage || hasCard;
+  const trust = hero.trust || [];
 
   return (
-    <section className={`relative overflow-hidden noise ${hasAnnouncement ? 'pt-36 md:pt-44' : 'pt-32 md:pt-40'} pb-20 md:pb-28`}>
-      <div className="aurora">
-        <i className="w-[44rem] h-[44rem] bg-gold/25 -top-72 -right-40" />
-        <i className="w-[38rem] h-[38rem] bg-teal/20 -bottom-72 -left-40" style={{ animationDelay: '-6s' }} />
-        <i className="w-[30rem] h-[30rem] bg-violet/20 top-1/3 left-1/3" style={{ animationDelay: '-12s' }} />
-      </div>
-      <div className="grid-bg" />
+    <section className={`dz bg-bg relative overflow-hidden pb-16 ${hasAnnouncement ? 'pt-[8.25rem] md:pt-[11rem]' : 'pt-[7.5rem] md:pt-[10.5rem]'}`}>
+      <style>{HERO_CSS}</style>
 
-      <div className="wrap relative grid lg:grid-cols-[1.1fr_.9fr] gap-14 items-center">
-        <div>
-          <div className="animate-rise" style={{ animationDelay: '.05s' }}>
-            <span className="chip border-gold/30 bg-gold/10 text-gold">
-              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" /> {hero.eyebrow}
+      {/* The original hero glows (gold top-right, teal bottom-left), gently drifting and trailing the scroll */}
+      <div className="glow-hero parallax" style={{ '--p-speed': 0.1 }} aria-hidden="true" />
+
+      <div className={`wrap relative grid gap-10 items-start ${hasRight ? 'lg:grid-cols-[1.05fr_.95fr]' : ''}`}>
+        <div className={hasRight ? '' : 'max-w-[52rem]'}>
+          <span className="eyebrow fade-up" style={{ '--d': '120ms' }}>{hero.eyebrow}</span>
+
+          {/* Each line wipes up out of its own mask, in sequence */}
+          <h1 className="h-display mt-4 text-fg flex flex-col">
+            <span className="hero-line"><span style={{ '--d': '220ms' }}>{hero.headlinePrefix}{' '}</span></span>
+            <span className="hero-line"><span style={{ '--d': '340ms' }}><Rotator words={words} />{' '}</span></span>
+            {hero.headlineSuffix && <span className="hero-line"><span style={{ '--d': '460ms' }}>{hero.headlineSuffix}</span></span>}
+          </h1>
+
+          <p className="lead mt-5 max-w-[34em] fade-up" style={{ '--d': '600ms' }}>{hero.lead}</p>
+
+          <div className="flex flex-wrap gap-4 mt-8 fade-up" style={{ '--d': '720ms' }}>
+            {/* magnetic lives on a wrapper: .btn:hover owns the button's own transform */}
+            <span data-magnetic="0.18" className="inline-flex">
+              <Link href="/contact" className="btn btn-primary">
+                {hero.ctaPrimary} <Icon name="arrow" className="w-4 h-4" />
+              </Link>
+            </span>
+            <span data-magnetic="0.18" className="inline-flex">
+              <Link href="/services" className="btn btn-ghost">{hero.ctaSecondary}</Link>
             </span>
           </div>
-          <h1 className="h-display mt-6 animate-rise" style={{ animationDelay: '.15s' }}>
-            {hero.headlinePrefix}{' '}
-            <Rotator words={words} />{' '}
-            <span className="text-fg/90">{hero.headlineSuffix}</span>
-          </h1>
-          <p className="lead mt-6 max-w-[34em] animate-rise" style={{ animationDelay: '.28s' }}>{hero.lead}</p>
 
-          <div className="flex flex-wrap gap-3 mt-9 animate-rise" style={{ animationDelay: '.4s' }}>
-            <Link href="/contact" className="btn btn-primary">{hero.ctaPrimary} <Icon name="arrow" className="w-4 h-4" /></Link>
-            <Link href="/services" className="btn btn-ghost">{hero.ctaSecondary}</Link>
-          </div>
-
-          <ul className="flex flex-wrap gap-x-6 gap-y-2 mt-8 animate-rise" style={{ animationDelay: '.5s' }}>
-            {(hero.trust || []).map((t) => (
-              <li key={t} className="flex items-center gap-2 font-mono text-[.76rem] text-muted">
-                <Icon name="check" className="w-4 h-4 text-teal" /> {t}
-              </li>
-            ))}
-          </ul>
+          {trust.length > 0 && (
+            <ul className="flex flex-wrap gap-x-5 gap-y-2 mt-6">
+              {trust.map((t, i) => (
+                <li key={t} className="flex items-center gap-[.45em] font-mono text-[.78rem] text-faint fade-up" style={{ '--d': `${860 + i * 90}ms` }}>
+                  <Icon name="check" className="w-[14px] h-[14px] text-teal" /> {t}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        {/* Visual: orbiting platform badges around the founder / brand mark */}
-        <div className="relative mx-auto w-full max-w-[520px] aspect-square animate-rise" style={{ animationDelay: '.3s' }}>
-          <div ref={wrapRef} className="absolute inset-0 transition-transform duration-300 ease-out will-change-transform">
-            <div className="orbit-ring" style={{ '--r': '100%', '--t': '60s' }} />
-            <div className="orbit-ring" style={{ '--r': '74%', '--t': '42s', '--dir': 'reverse' }} />
-            <div className="orbit-ring" style={{ '--r': '48%', '--t': '28s' }} />
-
-            {orbit.map((p, i) => {
-              const ring = [100, 74, 48][i % 3];
-              const delay = -((i * 11) % 28);
-              return (
-                <div
-                  key={p.key}
-                  className="orbit-arm"
-                  style={{ '--r': `${ring}%`, '--t': ['60s', '42s', '28s'][i % 3], '--dir': i % 3 === 1 ? 'reverse' : 'normal', animationDelay: `${delay}s` }}
-                >
-                  <span className="orbit-pill glass" style={{ '--dir': i % 3 === 1 ? 'reverse' : 'normal', animationDelay: `${delay}s` }}>
-                    <i className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                    {p.name}
-                  </span>
+        {hasImage && (
+          <div className="relative min-w-0 w-full max-w-[560px] mx-auto lg:max-w-none">
+            {/* wipe-in → gentle float → tilt: three wrappers so the three transforms never fight */}
+            <div className="hero-wipe" style={{ '--d': '380ms' }}>
+              <div className="float-slow">
+                <div data-tilt="3" className="rounded-2xl overflow-hidden shadow-cardLg ring-1 ring-edge/10 aspect-[4/3] sm:aspect-[4/3.6]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={hero.sideImageUrl}
+                    alt={founder?.name || ''}
+                    className="hero-zoom w-full h-full"
+                    style={{ '--d': '380ms', objectFit: hero.sideImageFit || 'cover', objectPosition: hero.sideImagePosition || 'top' }}
+                    draggable="false"
+                  />
                 </div>
-              );
-            })}
-
-            <div className="absolute inset-[27%] rounded-full grid place-items-center overflow-hidden ring-1 ring-gold/50 shadow-glow bg-surface">
-              <div className="absolute inset-0 bg-gradient-to-br from-gold/25 via-transparent to-teal/25" />
-              {hero.sideImageUrl || brand?.portraitUrl || brand?.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={hero.sideImageUrl || brand.portraitUrl || brand.avatarUrl} alt={founder?.name || ''} className="relative w-full h-full object-cover object-top" />
-              ) : (
-                <span className="relative font-display font-extrabold text-5xl grad-text">EZ</span>
-              )}
-            </div>
-
-            {founder?.name && (
-              <div className="absolute left-[2%] bottom-[8%] glass rounded-2xl px-4 py-3 animate-float shadow-card">
-                <div className="font-display font-bold text-sm">{founder.name}</div>
-                <div className="font-mono text-[.65rem] text-gold mt-0.5">{founder.role}</div>
               </div>
-            )}
-            <div className="absolute right-[2%] top-[10%] glass rounded-2xl px-4 py-3 animate-float shadow-card" style={{ animationDelay: '-3s' }}>
-              <div className="flex items-center gap-2 font-display font-bold text-sm"><Icon name="users" className="w-4 h-4 text-teal" /> 1-on-1 coaching</div>
-              <div className="font-mono text-[.65rem] text-muted mt-0.5">Built around your store</div>
             </div>
           </div>
-        </div>
+        )}
+
+        {hasCard && (
+          <div className="relative min-w-0">
+            <div className="hero-card" style={{ '--d': '480ms' }}>
+              <div data-tilt="3">
+                <PlatformDashboard platforms={list} disclaimer={dashboard?.disclaimer} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

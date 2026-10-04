@@ -1,24 +1,69 @@
-// Logo wall. Uses an uploaded logo when present, otherwise a clean wordmark chip.
+import Reveal from './Reveal';
+
+// Platform / logo strip. Uses an uploaded logo when present, otherwise the name
+// in Archivo extrabold — white cards on a paper band, like the original.
+//
+// Seamless loop: the track is two IDENTICAL halves and the global `scroll`
+// keyframe moves it exactly -50%, so the join is invisible. Each half repeats
+// the list until it is wider than any screen.
+const MIN_PER_HALF = 18;
+
 export default function Marquee({ label, items = [] }) {
-  if (!items.length) return null;
-  const row = [...items, ...items];
+  const list = (items || []).filter(Boolean);
+  if (!list.length) return null;
+
+  const reps = Math.max(1, Math.ceil(MIN_PER_HALF / list.length));
+  const half = Array.from({ length: reps }, () => list).flat();
+  const track = [...half, ...half];
+  const speed = Math.max(30, Math.round(half.length * 3)); // ≈ constant px/s however many items
+
   return (
-    <section aria-label={label} className="relative py-10 border-y border-edge/10 bg-bg2/60">
-      <p className="text-center font-mono text-[.7rem] tracking-[.2em] uppercase text-faint mb-7">{label}</p>
-      <div className="marquee-mask overflow-hidden">
-        <div className="marquee" style={{ '--speed': `${Math.max(20, items.length * 7)}s` }}>
-          {row.map((it, i) => (
-            <div key={`${it.name}-${i}`} aria-hidden={i >= items.length} className="mx-3 flex-none h-14 min-w-[10rem] px-7 rounded-2xl border border-edge/10 bg-surface/60 grid place-items-center">
-              {it.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.logoUrl} alt={it.name} loading="lazy" decoding="async" className="max-h-8 max-w-[8rem] object-contain" />
-              ) : (
-                <span className="font-display font-bold text-lg tracking-tight text-muted">{it.name}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+    <section aria-label={label} className="relative overflow-hidden border-y border-edge/10 bg-bg2 py-7 md:py-8">
+      {label && (
+        <Reveal as="p" from="fade" className="mb-6 flex items-center justify-center gap-4 px-5 text-center font-mono text-[.7rem] uppercase tracking-[.2em] text-muted">
+          {/* gold hairlines grow outward from the label as it appears */}
+          <span aria-hidden="true" className="h-px w-8 origin-right bg-gold/60 transition-transform duration-[900ms] ease-out [.js_&]:scale-x-0 [.js_.is-in_&]:scale-x-100" />
+          {label}
+          <span aria-hidden="true" className="h-px w-8 origin-left bg-gold/60 transition-transform duration-[900ms] ease-out [.js_&]:scale-x-0 [.js_.is-in_&]:scale-x-100" />
+        </Reveal>
+      )}
+
+      {/* Pauses on hover (global .marquee-mask rule). With reduced motion the
+          strip stops and becomes a centred, wrapping row of the first set only. */}
+      <Reveal from="fade" delay={150} className="marquee-mask overflow-hidden motion-reduce:![mask-image:none] motion-reduce:![-webkit-mask-image:none]">
+        <ul className="marquee py-3 motion-reduce:!animate-none motion-reduce:!w-auto motion-reduce:flex-wrap motion-reduce:justify-center" style={{ '--speed': `${speed}s` }}>
+          {track.map((it, i) => {
+            const hasName = it.name && it.name.trim().length > 0;
+            const dupe = i >= list.length; // every card after the first set is decoration
+            const logoOnly = it.logoUrl && !hasName;
+            return (
+              <li
+                key={i}
+                aria-hidden={dupe ? 'true' : undefined}
+                // The CARD stays the same size; only the picture inside grows. A logo-only
+                // card drops the wide side padding so the logo can fill the card instead.
+                className={`group mx-2.5 flex h-[4.25rem] min-w-[9.5rem] flex-none items-center justify-center gap-3 whitespace-nowrap rounded-xl border-[1.5px] border-line bg-white ${logoOnly ? 'px-3 py-1.5' : 'px-8'} font-display text-[1.1rem] font-extrabold text-ink shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gold/60 hover:shadow-card motion-reduce:my-1.5 ${dupe ? 'motion-reduce:hidden' : ''}`}
+              >
+                {it.logoUrl && (
+                  // Eager on purpose: the track is `max-content` wide and moved by a
+                  // percentage, so a logo that loads late would widen its card and make
+                  // the whole strip jump. The fixed height + min width reserve its box.
+                  // Full colour at full opacity (no grey wash) so the logo reads sharp and clear.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={it.logoUrl}
+                    alt={hasName ? '' : it.name || ''}
+                    loading="eager"
+                    decoding="async"
+                    className={`w-auto flex-none object-contain transition-transform duration-300 group-hover:scale-110 ${logoOnly ? 'h-full max-h-[3.4rem] max-w-[8.75rem]' : 'h-11 max-w-[5.5rem]'}`}
+                  />
+                )}
+                {hasName && it.name}
+              </li>
+            );
+          })}
+        </ul>
+      </Reveal>
     </section>
   );
 }

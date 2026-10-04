@@ -6,7 +6,6 @@ import FeatureBlock from '@/components/FeatureBlock';
 import ProcessSteps from '@/components/ProcessSteps';
 import StatsBand from '@/components/StatsBand';
 import Testimonials from '@/components/Testimonials';
-import PlatformDashboard from '@/components/PlatformDashboard';
 import PlatformQuiz from '@/components/PlatformQuiz';
 import Faq from '@/components/Faq';
 import BlogCard from '@/components/BlogCard';
@@ -15,109 +14,120 @@ import Icon from '@/components/Icons';
 import { SectionHeading } from '@/components/SectionHeading';
 import Reveal from '@/components/Reveal';
 
+// One light band of the page: white by default, paper (bg-bg2) when tone === 'paper'.
+function Band({ tone, children }) {
+  return (
+    <section className={`section ${tone === 'paper' ? 'bg-bg2' : ''}`}>
+      <div className="wrap">{children}</div>
+    </section>
+  );
+}
+
 export default function HomeContent({ content, posts = [] }) {
   const vis = content.visibility || {};
   const sl = content.sectionLabels;
-  const d = content.dashboard;
+  const brand = content.brand || {};
+  const blogPosts = vis.blogPreview !== false ? posts.slice(0, 3) : [];
+
+  // Page rhythm (as in the original): dark hero → paper marquee strip → then the
+  // light sections alternate white / paper, with the stats band as the one dark
+  // break and the CTA to close. Tones are computed from whatever is switched on,
+  // so the rhythm survives sections being hidden in the admin. Section order is
+  // the original one (the quiz stays third, right after the feature block).
+  const order = [
+    'services',
+    vis.diagnosis !== false && 'feature',
+    vis.quiz !== false && 'quiz',
+    vis.process !== false && 'process',
+    vis.stats !== false && 'stats',
+    vis.testimonials !== false && 'stories',
+    blogPosts.length > 0 && 'blog',
+    vis.faq !== false && 'faq',
+  ].filter(Boolean);
+
+  const tone = {};
+  let paper = false;
+  for (const key of order) {
+    if (key === 'stats') { tone[key] = 'dark'; paper = false; continue; }
+    tone[key] = paper ? 'paper' : 'white';
+    paper = !paper;
+  }
+  // The CTA card sits on white. After a white section its own top spacing is
+  // already there (like the original); after paper / dark it needs its own.
+  const ctaFlush = tone[order[order.length - 1]] === 'white';
 
   return (
     <main id="main">
       <Hero
         hero={content.hero}
         platforms={content.platforms}
-        brand={content.brand}
+        brand={brand}
         founder={content.founder}
         hasAnnouncement={!!(vis.announcement !== false && content.announcement?.enabled)}
+        showDashboard={vis.dashboard !== false}
+        dashboard={content.dashboard}
       />
 
       {vis.marquee !== false && <Marquee label={content.trustStripLabel} items={content.marqueeItems} />}
 
-      <section className="section">
-        <div className="wrap">
-          <SectionHeading {...sl.whatWeDo} />
-          <ServicesOverview items={content.servicesOverview} />
-        </div>
-      </section>
+      <Band tone={tone.services}>
+        <SectionHeading {...sl.whatWeDo} />
+        <ServicesOverview items={content.servicesOverview} />
+      </Band>
 
-      {vis.diagnosis !== false && (
-        <section className="section bg-bg2/60 border-y border-edge/10">
-          <div className="wrap"><FeatureBlock data={content.featureBlock} /></div>
-        </section>
+      {tone.feature && (
+        <Band tone={tone.feature}>
+          <FeatureBlock data={content.featureBlock} />
+        </Band>
       )}
 
-      {vis.quiz !== false && (
-        <section className="section">
-          <div className="wrap">
-            <SectionHeading {...sl.quiz} center />
-            <Reveal><PlatformQuiz /></Reveal>
-          </div>
-        </section>
+      {tone.quiz && (
+        <Band tone={tone.quiz}>
+          <SectionHeading {...sl.quiz} center />
+          <Reveal from="zoom"><PlatformQuiz /></Reveal>
+        </Band>
       )}
 
-      {vis.process !== false && (
-        <section className="section bg-bg2/60 border-y border-edge/10">
-          <div className="wrap">
-            <SectionHeading {...sl.howItWorks} />
-            <ProcessSteps steps={content.process} />
-          </div>
-        </section>
+      {tone.process && (
+        <Band tone={tone.process}>
+          <SectionHeading {...sl.howItWorks} />
+          <ProcessSteps steps={content.process} />
+        </Band>
       )}
 
-      {vis.dashboard !== false && (
-        <section className="section">
-          <div className="wrap grid lg:grid-cols-[.8fr_1.2fr] gap-12 lg:gap-16 items-center">
-            <Reveal from="left">
-              <span className="eyebrow">{d.eyebrow}</span>
-              <h2 className="h-section mt-4">{d.heading}</h2>
-              <p className="lead mt-5">{d.lead}</p>
-              <ul className="mt-8 space-y-3 text-[.97rem]">
-                {['Revenue by platform, day by day', 'Listing & coaching activity in one view', 'Clear before / after on every change we make'].map((t) => (
-                  <li key={t} className="flex items-center gap-3"><span className="w-5 h-5 rounded-full bg-teal/15 text-teal grid place-items-center"><Icon name="check" className="w-3 h-3" /></span>{t}</li>
-                ))}
-              </ul>
+      {tone.stats && <StatsBand stats={content.stats} />}
+
+      {tone.stories && (
+        <Band tone={tone.stories}>
+          <SectionHeading {...sl.successStories} />
+          <Testimonials items={content.testimonials} />
+        </Band>
+      )}
+
+      {tone.blog && (
+        <Band tone={tone.blog}>
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-6 md:mb-14">
+            <SectionHeading {...sl.blog} className="!mb-0" />
+            <Reveal from="right">
+              <Link href="/blog" className="btn btn-ghost btn-sm">All articles <Icon name="arrow" className="h-4 w-4" /></Link>
             </Reveal>
-            <Reveal from="right"><PlatformDashboard platforms={content.platforms} disclaimer={d.disclaimer} /></Reveal>
           </div>
-        </section>
+          <div className="grid gap-6 md:grid-cols-3">
+            {blogPosts.map((p, i) => <BlogCard key={p.slug} post={p} index={i} />)}
+          </div>
+        </Band>
       )}
 
-      {vis.stats !== false && <StatsBand stats={content.stats} />}
-
-      {vis.testimonials !== false && (
-        <section className="section">
-          <div className="wrap">
-            <SectionHeading {...sl.successStories} />
-            <Testimonials items={content.testimonials} />
-          </div>
-        </section>
-      )}
-
-      {vis.blogPreview !== false && posts.length > 0 && (
-        <section className="section bg-bg2/60 border-y border-edge/10">
-          <div className="wrap">
-            <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-              <SectionHeading {...sl.blog} className="!mb-0" />
-              <Link href="/blog" className="btn btn-ghost btn-sm">All articles <Icon name="arrow" className="w-4 h-4" /></Link>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {posts.slice(0, 3).map((p, i) => <BlogCard key={p.slug} post={p} index={i} />)}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {vis.faq !== false && (
-        <section className="section">
-          <div className="wrap">
-            <SectionHeading {...sl.faq} center />
-            <Faq items={content.faqs} />
-          </div>
-        </section>
+      {tone.faq && (
+        <Band tone={tone.faq}>
+          <SectionHeading {...sl.faq} center />
+          <Faq items={content.faqs} whatsapp={brand.whatsapp} messengerUsername={brand.messengerUsername} />
+        </Band>
       )}
 
       {vis.cta !== false && (
-        <section className="pb-20 md:pb-28">
-          <div className="wrap"><CtaBanner {...content.ctaBanners.home} brand={content.brand} /></div>
+        <section className={ctaFlush ? 'pb-20 md:pb-28' : 'section'}>
+          <div className="wrap"><CtaBanner {...content.ctaBanners.home} brand={brand} /></div>
         </section>
       )}
     </main>
