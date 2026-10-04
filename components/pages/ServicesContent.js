@@ -1,123 +1,79 @@
+import Link from 'next/link';
 import Icon from '@/components/Icons';
 import CtaBanner from '@/components/CtaBanner';
 import Reveal from '@/components/Reveal';
+import { PageHeader, SectionHeading } from '@/components/SectionHeading';
+import { slugifyService } from '@/lib/seo';
 
 export default function ServicesContent({ content }) {
-  const { serviceCategories, coaching, pageHeaders, sectionLabels } = content;
-  const storeCat = serviceCategories?.[0];
-  const creativeCat = serviceCategories?.[1];
-  const ph = pageHeaders.services;
-  const sl = sectionLabels;
+  const { serviceCategories, coaching, pageHeaders, brand } = content;
+  const h = pageHeaders.services;
 
   return (
-    <main>
-      <div className="relative bg-ink text-white pt-[7.5rem] md:pt-[9.5rem] overflow-hidden" style={{ paddingBottom: `${(content.layout && content.layout.pageHeader) ?? 4}rem` }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(45% 60% at 90% 0%, rgba(29,148,136,.18), transparent 65%)' }} />
-        <div className="relative max-w-[1200px] mx-auto px-5 sm:px-10">
-          <span className="eyebrow eyebrow-dark">{ph.eyebrow}</span>
-          <h1 className="mt-3 max-w-[16em]" style={{ fontSize: 'var(--ts-title, 3rem)' }}>{ph.title}</h1>
-          <p className="text-[#C4CADA] text-[1.125rem] max-w-[34em] mt-4">{ph.lead}</p>
+    <main id="main">
+      <PageHeader eyebrow={h.eyebrow} title={h.title} lead={h.lead} crumbs={[{ label: 'Home', href: '/' }, { label: 'Services' }]}>
+        <div className="mt-8 flex flex-wrap gap-2">
+          {serviceCategories.map((c) => (
+            <a key={c.title} href={`#${slugifyService(c.title)}`} className="chip hover:border-gold/50 hover:text-fg transition-colors">{c.title}</a>
+          ))}
+          <a href="#coaching" className="chip hover:border-gold/50 hover:text-fg transition-colors">Coaching</a>
         </div>
-      </div>
+      </PageHeader>
 
-      <section className="py-16 md:py-[5.5rem]">
-        <div className="max-w-[1200px] mx-auto px-5 sm:px-10">
-
-          {storeCat && (
-            <div className="mb-16">
-              <Reveal className="flex items-baseline justify-between gap-4 mb-6 border-b border-line pb-4 flex-wrap">
-                <div>
-                  <span className="eyebrow">{sl.storeSetup.eyebrow}</span>
-                  <h2 className="text-[1.5rem] mt-2">{sl.storeSetup.heading}</h2>
-                </div>
-              </Reveal>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {storeCat.items.map((item, i) => (
-                  <Reveal key={i} delay={i * 60}>
-                    <div className="bg-white border border-line rounded-2xl p-6 h-full flex flex-col transition-all hover:-translate-y-1 hover:shadow-card">
-                      <div className="w-[46px] h-[46px] rounded-[10px] bg-paper2 text-tealDeep flex items-center justify-center mb-4">
-                        <Icon name="shop" className="w-[22px] h-[22px]" />
-                      </div>
-                      <h3 className="text-[1.3rem] mb-2">{item.title}</h3>
-                      <p className="text-slateSoft text-[.96rem]">{item.description}</p>
-                      <ul className="mt-4 pt-4 border-t border-line space-y-[.28rem]">
-                        {item.includes.map((inc, j) => (
-                          <li key={j} className="flex gap-2 text-[.88rem] text-slate">
-                            <Icon name="check" className="w-[14px] h-[14px] text-teal flex-none mt-[.25rem]" /> {inc}
-                          </li>
-                        ))}
-                      </ul>
+      {serviceCategories.map((cat, ci) => (
+        <section key={cat.title} id={slugifyService(cat.title)} className={`section ${ci % 2 ? 'bg-bg2/60 border-y border-edge/10' : 'pt-6'}`}>
+          <div className="wrap">
+            <SectionHeading eyebrow={cat.title} heading={cat.heading} />
+            <div className="grid gap-4 md:grid-cols-2">
+              {cat.items.map((s, i) => (
+                <Reveal key={s.title} delay={(i % 2) * 90}>
+                  <Link href={`/services/${s.slug || slugifyService(s.title)}`} className="card card-hover spot group h-full p-7 sm:p-8 flex flex-col">
+                    <div className="flex items-start justify-between gap-4">
+                      <h3 className="text-[1.5rem]">{s.title}</h3>
+                      <span className="w-10 h-10 flex-none rounded-full border border-edge/15 grid place-items-center text-muted group-hover:bg-gold2 group-hover:text-[#1a1204] group-hover:border-gold2 transition-all">
+                        <Icon name="upright" className="w-4 h-4" />
+                      </span>
                     </div>
-                  </Reveal>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {coaching && (
-            <div className="mb-16">
-              <Reveal className="mb-6">
-                <span className="eyebrow">{sl.coaching.eyebrow}</span>
-                <h2 className="text-[1.5rem] mt-2">{sl.coaching.heading}</h2>
-              </Reveal>
-              <Reveal>
-                <div className="bg-ink text-white rounded-[20px] p-8 grid md:grid-cols-2 gap-8 items-center">
-                  <div>
-                    <h3 className="text-[1.4rem] text-white">{coaching.title}</h3>
-                    <p className="text-[#C4CADA] mt-4">{coaching.description}</p>
-                    <div className="flex flex-wrap gap-[.6rem] mt-5">
-                      {(coaching.pills || []).map((p) => (
-                        <span key={p} className="font-mono-eyebrow text-[.74rem] border border-white/25 px-[.8em] py-[.4em] rounded-full text-[#D7DBE4]">{p}</span>
+                    <p className="mt-3 text-muted leading-relaxed">{s.description}</p>
+                    <ul className="mt-6 space-y-2.5 text-[.95rem]">
+                      {s.includes.map((inc) => (
+                        <li key={inc} className="flex items-center gap-3"><Icon name="check" className="w-4 h-4 flex-none text-teal" />{inc}</li>
                       ))}
-                    </div>
-                  </div>
-                  <ul className="space-y-0">
-                    {(coaching.includes || []).map((inc, i) => (
-                      <li key={i} className={`flex gap-[.7rem] py-[.6rem] text-[.92rem] text-[#D7DBE4] ${i !== 0 ? 'border-t border-lineDark' : ''}`}>
-                        <Icon name="check" className="w-4 h-4 text-teal flex-none mt-[.2rem]" /> {inc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </Reveal>
+                    </ul>
+                  </Link>
+                </Reveal>
+              ))}
             </div>
-          )}
+          </div>
+        </section>
+      ))}
 
-          {creativeCat && (
-            <div>
-              <Reveal className="mb-6 border-b border-line pb-4">
-                <span className="eyebrow">{sl.creative.eyebrow}</span>
-                <h2 className="text-[1.5rem] mt-2">{sl.creative.heading}</h2>
-              </Reveal>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {creativeCat.items.map((item, i) => (
-                  <Reveal key={i} delay={i * 60}>
-                    <div className="bg-white border border-line rounded-2xl p-6 h-full flex flex-col transition-all hover:-translate-y-1 hover:shadow-card">
-                      <div className="w-[46px] h-[46px] rounded-[10px] bg-paper2 text-tealDeep flex items-center justify-center mb-4">
-                        <Icon name={i === 0 ? 'brush' : i === 1 ? 'code' : 'app'} className="w-[22px] h-[22px]" />
-                      </div>
-                      <h3 className="text-[1.3rem] mb-2">{item.title}</h3>
-                      <p className="text-slateSoft text-[.96rem]">{item.description}</p>
-                      <ul className="mt-4 pt-4 border-t border-line space-y-[.28rem]">
-                        {item.includes.map((inc, j) => (
-                          <li key={j} className="flex gap-2 text-[.88rem] text-slate">
-                            <Icon name="check" className="w-[14px] h-[14px] text-teal flex-none mt-[.25rem]" /> {inc}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </Reveal>
-                ))}
+      <section id="coaching" className="section">
+        <div className="wrap">
+          <Reveal className="card relative overflow-hidden p-8 sm:p-12 grid lg:grid-cols-[1.1fr_.9fr] gap-10 items-center">
+            <div className="aurora"><i className="w-96 h-96 bg-violet/20 -top-32 -left-20" /></div>
+            <div className="relative">
+              <span className="eyebrow">Coaching & Mentorship</span>
+              <h2 className="h-section mt-4">{coaching.title}</h2>
+              <p className="lead mt-5">{coaching.description}</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {coaching.pills.map((p) => <span key={p} className="chip border-gold/25 text-gold">{p}</span>)}
               </div>
             </div>
-          )}
+            <ul className="relative space-y-3">
+              {coaching.includes.map((inc) => (
+                <li key={inc} className="flex items-start gap-3 rounded-2xl border border-edge/10 bg-bg2/60 p-4">
+                  <span className="mt-0.5 w-6 h-6 flex-none rounded-full bg-teal/15 text-teal grid place-items-center"><Icon name="check" className="w-3.5 h-3.5" /></span>
+                  <span>{inc}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
         </div>
       </section>
 
-      <section className="bg-paper py-16 md:py-[5.5rem]">
-        <div className="max-w-[1200px] mx-auto px-5 sm:px-10">
-          <CtaBanner eyebrow={content.ctaBanners.services.eyebrow} title={content.ctaBanners.services.title} description={content.ctaBanners.services.description} />
-        </div>
+      <section className="pb-20 md:pb-28">
+        <div className="wrap"><CtaBanner {...content.ctaBanners.services} brand={brand} /></div>
       </section>
     </main>
   );

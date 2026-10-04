@@ -1,37 +1,12 @@
-'use client';
-import { useEffect, useRef, useState } from 'react';
-
-export default function Reveal({ children, className = '', as: Tag = 'div', delay = 0 }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (!('IntersectionObserver' in window)) {
-      setVisible(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            io.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+// Server-friendly scroll-reveal wrapper. The actual animation is driven by the
+// single global observer in <PointerEffects/>, so this adds zero client JS.
+export default function Reveal({ children, className = '', as: Tag = 'div', delay = 0, from = 'up', ...rest }) {
   return (
     <Tag
-      ref={ref}
-      className={`reveal ${visible ? 'in' : ''} ${className}`}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      data-reveal={from === 'up' ? '' : from}
+      style={delay ? { '--d': `${delay}ms` } : undefined}
+      className={className}
+      {...rest}
     >
       {children}
     </Tag>

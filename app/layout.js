@@ -1,39 +1,65 @@
 import './globals.css';
-import { getContent } from '@/lib/db';
+import { Sora, Inter, JetBrains_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { getContent } from '@/lib/db';
+import { siteUrl } from '@/lib/seo';
+import PointerEffects from '@/components/PointerEffects';
 
-export const metadata = {
-  title: 'E-Commerce With Zohaib — Marketplace Growth & Coaching Agency',
-  description: 'E-Commerce With Zohaib helps new and struggling sellers launch and grow on eBay, Amazon, Shopify, and TikTok Shop — with coaching, store setup, graphic design, web and app development.',
+const display = Sora({ subsets: ['latin'], variable: '--font-display', display: 'swap', weight: ['500', '600', '700', '800'] });
+const body = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap', weight: ['400', '500'] });
+
+export async function generateMetadata() {
+  const c = await getContent();
+  const icon = c.brand.faviconUrl || c.brand.avatarUrl;
+  const og = c.brand.ogImageUrl;
+  return {
+    metadataBase: new URL(siteUrl()),
+    title: { default: c.seo.title, template: `%s — ${c.brand.name} ${c.brand.sub}` },
+    description: c.seo.description,
+    keywords: c.seo.keywords,
+    applicationName: `${c.brand.name} ${c.brand.sub}`,
+    authors: [{ name: c.founder.name }],
+    alternates: { canonical: '/' },
+    icons: icon ? { icon } : undefined,
+    openGraph: {
+      type: 'website',
+      siteName: `${c.brand.name} ${c.brand.sub}`,
+      title: c.seo.title,
+      description: c.seo.description,
+      url: '/',
+      images: og ? [{ url: og }] : undefined, // falls back to app/opengraph-image.js
+    },
+    twitter: { card: 'summary_large_image', title: c.seo.title, description: c.seo.description, images: og ? [og] : undefined },
+    robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 } },
+  };
+}
+
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#060912' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f7fc' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
 };
 
-export const dynamic = 'force-dynamic';
+// Runs before first paint: restores the saved theme (default dark) and flags
+// that JS is available so scroll-reveal never hides content for no-JS visitors.
+const initScript = `try{var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','dark')}document.documentElement.classList.add('js')`;
 
 export default async function RootLayout({ children }) {
   const content = await getContent();
-  const t = content.theme || {};
-  const ts = content.textSizes || {};
   const vis = content.visibility || {};
-  const favicon = content.brand?.faviconUrl || content.brand?.avatarUrl;
-  const themeCss = `:root{
-    --c-ink:${t.ink};--c-ink2:${t.ink2};--c-paper:${t.paper};--c-paper2:${t.paper2};
-    --c-gold:${t.gold};--c-goldDeep:${t.goldDeep};--c-teal:${t.teal};--c-tealDeep:${t.tealDeep};
-    --c-slate:${t.slate};--c-slateSoft:${t.slateSoft};--c-line:${t.line};
-    --ts-hero:${ts.heroHeadline}rem;--ts-heading:${ts.sectionHeading}rem;--ts-title:${ts.pageTitle}rem;--ts-body:${ts.body}rem;
-  }`;
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark" className={`${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
-        {favicon && <link rel="icon" href={favicon} />}
-        <style dangerouslySetInnerHTML={{ __html: themeCss }} />
+        <script dangerouslySetInnerHTML={{ __html: initScript }} />
       </head>
       <body>
+        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[400] focus:btn focus:btn-primary focus:btn-sm">Skip to content</a>
+        <div className="progress" aria-hidden="true" />
+        <PointerEffects />
         {children}
         {vis.analytics !== false && <Analytics />}
       </body>

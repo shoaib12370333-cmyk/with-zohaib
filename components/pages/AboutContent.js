@@ -1,49 +1,51 @@
 import Icon from '@/components/Icons';
 import CtaBanner from '@/components/CtaBanner';
 import Reveal from '@/components/Reveal';
+import { PageHeader, SectionHeading } from '@/components/SectionHeading';
 
 export default function AboutContent({ content }) {
-  const { founder, values, brand, pageHeaders, sectionLabels } = content;
-  const ph = pageHeaders.about;
-  const sl = sectionLabels;
+  const { founder, brand, values, sectionLabels: sl, pageHeaders } = content;
+  const h = pageHeaders.about;
+  const photo = brand.portraitUrl || brand.avatarUrl;
 
   return (
-    <main>
-      <div className="relative bg-ink text-white pt-[7.5rem] md:pt-[9.5rem] overflow-hidden" style={{ paddingBottom: `${(content.layout && content.layout.pageHeader) ?? 4}rem` }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(45% 60% at 90% 0%, rgba(29,148,136,.18), transparent 65%)' }} />
-        <div className="relative max-w-[1200px] mx-auto px-5 sm:px-10">
-          <span className="eyebrow eyebrow-dark">{ph.eyebrow}</span>
-          <h1 className="mt-3 max-w-[16em]" style={{ fontSize: 'var(--ts-title, 3rem)' }}>{ph.title}</h1>
-          <p className="text-[#C4CADA] text-[1.125rem] max-w-[34em] mt-4">{ph.lead}</p>
-        </div>
-      </div>
+    <main id="main">
+      <PageHeader eyebrow={h.eyebrow} title={h.title} lead={h.lead} crumbs={[{ label: 'Home', href: '/' }, { label: 'About' }]} />
 
-      <section className="py-16 md:py-[5.5rem]">
-        <div className="max-w-[1200px] mx-auto px-5 sm:px-10 grid md:grid-cols-[.85fr_1.15fr] gap-10 items-start">
-          <Reveal className="relative rounded-2xl overflow-hidden shadow-cardLg" as="div">
-            {brand.portraitUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={brand.portraitUrl} alt={`${founder.name}, ${founder.role}`} className="w-full block" />
-            ) : (
-              <div className="w-full aspect-[3/4] bg-paper2 flex items-center justify-center text-slateSoft">Add a photo from the admin panel</div>
-            )}
-            <span className="absolute left-5 bottom-5 bg-ink text-gold font-mono-eyebrow text-[.72rem] tracking-[.08em] px-4 py-[.55em] rounded-full">
-              {founder.role?.toUpperCase()}
-            </span>
+      <section className="section pt-4">
+        <div className="wrap grid lg:grid-cols-[.8fr_1.2fr] gap-12 lg:gap-20 items-start">
+          <Reveal from="left" className="lg:sticky lg:top-28">
+            <div className="relative">
+              <div className="absolute -inset-4 rounded-[2.2rem] bg-gradient-to-br from-gold/30 via-transparent to-teal/25 blur-2xl" aria-hidden="true" />
+              <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden border border-edge/15 bg-surface shadow-card">
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt={founder.name} className="w-full h-full object-cover object-top" />
+                ) : (
+                  <div className="w-full h-full grid place-items-center font-display font-extrabold text-8xl grad-text">{founder.name?.[0] || 'Z'}</div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-bg/90 to-transparent">
+                  <div className="font-display font-bold text-xl">{founder.name}</div>
+                  <div className="font-mono text-xs text-gold mt-1">{founder.role}</div>
+                </div>
+              </div>
+            </div>
           </Reveal>
 
-          <Reveal>
+          <Reveal from="right">
             <span className="eyebrow">{sl.meetFounder.eyebrow}</span>
-            <h2 className="mt-3 mb-5" style={{ fontSize: 'var(--ts-heading, 2.2rem)' }}>{sl.meetFounder.heading} {founder.name}.</h2>
-            {(founder.bio || []).map((p, i) => (
-              <p key={i} className="text-slate text-[1.125rem] mb-4">{p}</p>
-            ))}
-            <div className="bg-ink text-white rounded-2xl p-6 mt-8">
-              <span className="eyebrow eyebrow-dark">{sl.whoWeWorkWith}</span>
-              <ul className="mt-4 space-y-0">
-                {(founder.whoWeWorkWith || []).map((item, i) => (
-                  <li key={i} className={`flex gap-[.7rem] py-[.6rem] text-[.92rem] text-[#D7DBE4] ${i !== 0 ? 'border-t border-lineDark' : ''}`}>
-                    <Icon name="check" className="w-4 h-4 text-teal flex-none mt-[.2rem]" /> {item}
+            <h2 className="h-section mt-4">{sl.meetFounder.heading} <span className="grad-text">{founder.name}</span></h2>
+            <div className="mt-8 space-y-5 text-[1.05rem] text-muted leading-[1.85]">
+              {founder.bio.map((p) => <p key={p}>{p}</p>)}
+            </div>
+
+            <div className="mt-12 card p-7">
+              <h3 className="text-[1.15rem]">{sl.whoWeWorkWith}</h3>
+              <ul className="mt-5 space-y-3.5">
+                {founder.whoWeWorkWith.map((w) => (
+                  <li key={w} className="flex items-start gap-3 text-muted leading-relaxed">
+                    <span className="mt-1 w-5 h-5 flex-none rounded-full bg-gold/15 text-gold grid place-items-center"><Icon name="check" className="w-3 h-3" /></span>
+                    {w}
                   </li>
                 ))}
               </ul>
@@ -52,21 +54,16 @@ export default function AboutContent({ content }) {
         </div>
       </section>
 
-      <section className="bg-paper py-16 md:py-[5.5rem]">
-        <div className="max-w-[1200px] mx-auto px-5 sm:px-10">
-          <Reveal className="max-w-[640px] mb-8 md:mb-12">
-            <span className="eyebrow">{sl.values.eyebrow}</span>
-            <h2 className="mt-3" style={{ fontSize: 'var(--ts-heading, 2.2rem)' }}>{sl.values.heading}</h2>
-          </Reveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {(values || []).map((v, i) => (
-              <Reveal key={i} delay={i * 60}>
-                <div className="bg-white border border-line rounded-2xl p-6 h-full transition-all hover:-translate-y-1 hover:shadow-card">
-                  <div className="w-[46px] h-[46px] rounded-[10px] bg-ink text-gold flex items-center justify-center mb-4">
-                    <Icon name={v.icon} className="w-[22px] h-[22px]" />
-                  </div>
-                  <h3 className="text-[1.15rem] mb-2">{v.title}</h3>
-                  <p className="text-slateSoft text-[.96rem]">{v.description}</p>
+      <section className="section bg-bg2/60 border-y border-edge/10">
+        <div className="wrap">
+          <SectionHeading {...sl.values} />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {values.map((v, i) => (
+              <Reveal key={v.title} delay={i * 90}>
+                <div className="card spot h-full p-7">
+                  <span className="w-12 h-12 rounded-2xl bg-teal/12 text-teal border border-teal/25 grid place-items-center"><Icon name={v.icon} className="w-6 h-6" /></span>
+                  <h3 className="mt-6 text-[1.15rem]">{v.title}</h3>
+                  <p className="mt-3 text-muted leading-relaxed text-[.95rem]">{v.description}</p>
                 </div>
               </Reveal>
             ))}
@@ -74,10 +71,8 @@ export default function AboutContent({ content }) {
         </div>
       </section>
 
-      <section className="py-16 md:py-[5.5rem]">
-        <div className="max-w-[1200px] mx-auto px-5 sm:px-10">
-          <CtaBanner eyebrow={content.ctaBanners.about.eyebrow} title={content.ctaBanners.about.title} description={content.ctaBanners.about.description} />
-        </div>
+      <section className="section">
+        <div className="wrap"><CtaBanner {...content.ctaBanners.about} brand={brand} /></div>
       </section>
     </main>
   );

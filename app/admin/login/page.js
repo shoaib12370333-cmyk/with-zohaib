@@ -1,65 +1,65 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Icon from '@/components/Icons';
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(e) {
+  async function submit(e) {
     e.preventDefault();
-    setLoading(true);
+    setBusy(true);
     setError('');
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, code }),
       });
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        setError(`Server error (status ${res.status}). Please try again in a moment.`);
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        setError(data.error || 'Login failed');
-        setLoading(false);
-        return;
-      }
+      const data = await res.json().catch(() => ({}));
+      if (data.needsCode) { setNeedsCode(true); return; }
+      if (!res.ok) throw new Error(data.error || 'Login failed');
       router.push('/admin');
       router.refresh();
-    } catch {
-      setError('Something went wrong. Please try again.');
-      setLoading(false);
+    } catch (err) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-ink flex items-center justify-center px-5">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-ink2 border border-lineDark rounded-2xl p-8">
-        <span className="font-mono-eyebrow text-[.72rem] tracking-[.14em] text-gold uppercase">Admin Access</span>
-        <h1 className="text-white text-[1.6rem] font-display font-bold mt-2 mb-6">E-Commerce With Zohaib</h1>
-        <label className="block text-[#D7DBE4] text-sm font-display font-semibold mb-2">Password</label>
-        <input
-          type="password"
-          autoFocus
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-3 rounded-lg bg-ink border border-lineDark text-white outline-none focus:border-teal mb-4"
-        />
-        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gold hover:bg-goldDeep text-ink font-display font-bold py-3 rounded-full transition-colors disabled:opacity-60"
-        >
-          {loading ? 'Checking…' : 'Log In'}
-        </button>
+    <main className="relative min-h-screen grid place-items-center px-5 overflow-hidden noise">
+      <div className="aurora"><i className="w-[36rem] h-[36rem] bg-gold/20 -top-60 -right-40" /><i className="w-[30rem] h-[30rem] bg-teal/15 -bottom-60 -left-40" /></div>
+      <div className="grid-bg" />
+      <form onSubmit={submit} className="relative card w-full max-w-[420px] p-8 sm:p-10">
+        <div className="w-12 h-12 rounded-2xl bg-gold/15 text-gold border border-gold/30 grid place-items-center"><Icon name="lock" className="w-6 h-6" /></div>
+        <h1 className="text-[1.8rem] mt-6">Admin sign in</h1>
+        <p className="text-muted mt-2 text-sm">{needsCode ? 'Enter the 6-digit code from your authenticator app.' : 'Enter your admin password to manage the site.'}</p>
+
+        <div className="mt-7 space-y-4">
+          {!needsCode ? (
+            <div>
+              <label htmlFor="pw" className="label">Password</label>
+              <input id="pw" type="password" autoFocus autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="code" className="label">2FA code</label>
+              <input id="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoFocus autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} className="field text-center tracking-[.5em] font-mono text-xl" />
+            </div>
+          )}
+        </div>
+
+        {error && <p role="alert" className="mt-4 rounded-xl border border-rose/30 bg-rose/10 text-rose px-4 py-3 text-sm">{error}</p>}
+
+        <button type="submit" disabled={busy} className="btn btn-primary w-full mt-6 disabled:opacity-60">{busy ? 'Checking…' : needsCode ? 'Verify & sign in' : 'Continue'}</button>
+        <a href="/" className="block text-center text-sm text-faint hover:text-fg mt-5">← Back to site</a>
       </form>
     </main>
   );

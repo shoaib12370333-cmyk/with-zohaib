@@ -1,70 +1,20 @@
-'use client';
-import { useEffect, useRef, useState } from 'react';
+import CountUp from './CountUp';
 import Reveal from './Reveal';
 
-function StatNumber({ stat }) {
-  const ref = useRef(null);
-  const [display, setDisplay] = useState(stat.numeric ? '0' : stat.value);
-  const done = useRef(false);
-
-  useEffect(() => {
-    if (!stat.numeric) return;
-    const el = ref.current;
-    if (!el || !('IntersectionObserver' in window)) {
-      setDisplay(`${stat.value}${stat.suffix || ''}`);
-      return;
-    }
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !done.current) {
-            done.current = true;
-            if (reduceMotion) {
-              setDisplay(`${stat.value}${stat.suffix || ''}`);
-              return;
-            }
-            const to = Number(stat.value);
-            const dur = 1300;
-            let start = null;
-            const step = (ts) => {
-              if (!start) start = ts;
-              const p = Math.min((ts - start) / dur, 1);
-              const eased = 1 - Math.pow(1 - p, 3);
-              setDisplay(`${Math.round(eased * to)}${stat.suffix || ''}`);
-              if (p < 1) requestAnimationFrame(step);
-            };
-            requestAnimationFrame(step);
-            io.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [stat]);
-
+export default function StatsBand({ stats = [] }) {
   return (
-    <span ref={ref} className="font-mono-eyebrow font-semibold text-gold text-[2.3rem] sm:text-[2.8rem] lg:text-[3.5rem]">
-      {display}
-    </span>
-  );
-}
-
-export default function StatsBand({ stats, spacing = 4 }) {
-  return (
-    <div className="bg-ink">
-      <div className="max-w-[1200px] mx-auto px-5 sm:px-10" style={{ paddingBlock: `${spacing}rem` }}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8">
-          {(stats || []).map((stat, i) => (
-            <Reveal key={i} className="text-center px-3">
-              <StatNumber stat={stat} />
-              <span className="block text-[.85rem] text-[#AEB6C4] mt-[.4rem]">{stat.label}</span>
-            </Reveal>
-          ))}
-        </div>
+    <section className="relative py-16 md:py-20 border-y border-edge/10 overflow-hidden noise">
+      <div className="aurora"><i className="w-[40rem] h-[20rem] bg-gold/15 top-0 left-1/4" /></div>
+      <div className="wrap relative grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-6">
+        {stats.map((s, i) => (
+          <Reveal key={s.label} delay={i * 90} className="text-center lg:text-left lg:pl-6 lg:border-l border-edge/15 first:border-0">
+            <div className="font-display font-extrabold text-[clamp(2.4rem,1.6rem+3vw,4rem)] leading-none grad-text">
+              <CountUp to={s.value} suffix={s.suffix} />
+            </div>
+            <div className="mt-3 text-sm text-muted max-w-[18ch] mx-auto lg:mx-0">{s.label}</div>
+          </Reveal>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }

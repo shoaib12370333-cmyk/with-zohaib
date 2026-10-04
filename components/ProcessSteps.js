@@ -1,18 +1,21 @@
 import Reveal from './Reveal';
 
-export default function ProcessSteps({ steps }) {
+export default function ProcessSteps({ steps = [] }) {
   return (
-    <div className="grid md:grid-cols-3 gap-6">
-      {(steps || []).map((step, i) => (
-        <Reveal key={i} delay={i * 80}>
-          <div className="relative pt-6">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-line" />
-            <span className="font-mono-eyebrow text-[.75rem] text-gold tracking-[.1em]">{step.num}</span>
-            <h3 className="text-[1.3rem] mt-[.6rem] mb-[.5rem]">{step.title}</h3>
-            <p className="text-slateSoft text-[.96rem]">{step.description}</p>
+    <ol className="relative grid gap-5 md:grid-cols-3">
+      <div className="hidden md:block absolute left-[16%] right-[16%] top-[2.1rem] h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" aria-hidden="true" />
+      {steps.map((s, i) => (
+        <Reveal as="li" key={s.title} delay={i * 120} className="relative">
+          <div className="card spot p-7 h-full">
+            <div className="relative z-10 w-[4.2rem] h-[4.2rem] -mt-1 rounded-2xl grid place-items-center bg-bg border border-gold/40 shadow-glow font-display font-extrabold text-2xl grad-text">
+              {s.num}
+            </div>
+            <div className="mt-6 font-mono text-[.68rem] tracking-[.18em] uppercase text-gold">{s.label}</div>
+            <h3 className="mt-2 text-[1.3rem]">{s.title}</h3>
+            <p className="mt-3 text-muted leading-relaxed">{s.description}</p>
           </div>
         </Reveal>
       ))}
-    </div>
+    </ol>
   );
 }
