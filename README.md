@@ -10,7 +10,7 @@ public site — text, images, services, FAQs, blog — is editable from `/admin`
 - "Midnight Aurora" design system: dark / light mode, animated aurora hero, bento service grid,
   scroll reveals, count-up stats, cursor spotlight cards, command palette (`Ctrl/⌘ K`)
 - **Platform Match quiz** — a 3-question lead qualifier that recommends a starting platform
-- Sample revenue dashboard (clearly labelled as illustrative data)
+- Live revenue dashboard driven by each platform's chart points and daily min/max set in the admin; today's bar moves live but never leaves that range
 - Contact form with validation, honeypot, rate-limit, no-JS fallback and WhatsApp hand-off
 - SEO: per-page metadata, canonical URLs, Open Graph / Twitter cards (auto-generated share image),
   `sitemap.xml`, `robots.txt`, web manifest, JSON-LD (Organization, FAQ, Service, Article, Breadcrumbs)
@@ -73,6 +73,6 @@ components/…        UI components       lib/db.js        Postgres, rate limits
 
 ## Notes
 - Testimonials in `defaultContent.js` are placeholders — replace them with real, permissioned client feedback.
-- The sample dashboard uses illustrative data; keep its disclaimer unless you swap in real numbers.
+- Dashboard figures come from the admin (Homepage → Platforms: chart points, daily min / max). Keep them up to date; there is an optional footnote field (Homepage → Dashboard → Disclaimer).
 - `lib/seedPosts.js` holds three starter articles inserted once; edit or delete them in `/admin/posts`.
 - `/privacy` is a general template, not legal advice — have it reviewed for your jurisdiction.

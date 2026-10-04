@@ -2,16 +2,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 const DAYS = 90;
-const SAMPLE_NOTE = 'Illustrative sample data — not real client results.';
 
-// Deterministic pseudo-random so server and client render identical bars
-// (no Math.random anywhere in this file — the numbers never "tick").
+// Deterministic pseudo-random so server and client render identical bars.
+// (Math.random is only used inside the post-mount effect that animates today's bar.)
 function seeded(seed) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
 }
 
-// Turns the admin-entered checkpoints into a 90-day SAMPLE daily series.
+// Turns the admin-entered checkpoints and daily range into a 90-day daily series.
 function buildSeries(chart, key, lo, hi) {
   const values = chart?.length ? chart : [10, 20, 30, 40, 50];
   const n = values.length;
@@ -114,7 +113,7 @@ function Figures({ today, last7, last31, last90, delta, listings, sessions }) {
         <div className={row}>
           <span className={`flex items-center gap-2 ${label}`}>
             Last 31 days
-            <span className={`font-semibold tabular-nums ${up ? 'text-teal' : 'text-[#FF7A90]'}`} title="vs the previous 31 days (sample data)">
+            <span className={`font-semibold tabular-nums ${up ? 'text-teal' : 'text-[#FF7A90]'}`} title="vs the previous 31 days">
               {up ? '▲' : '▼'} {v[4].toFixed(1)}%
             </span>
           </span>
@@ -155,7 +154,36 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
   const lo = Number.isFinite(active?.dailyMin) ? active.dailyMin : 30;
   const hiRaw = Number.isFinite(active?.dailyMax) ? active.dailyMax : 220;
   const hi = hiRaw > lo ? hiRaw : lo + 1;
-  const series = useMemo(() => (active ? buildSeries(active.chart, active.key || 'x', lo, hi) : []), [active, lo, hi]);
+  const baseSeries = useMemo(() => (active ? buildSeries(active.chart, active.key || 'x', lo, hi) : []), [active, lo, hi]);
+
+  // "Live" today bar. It always stays inside the daily range set in the admin panel
+  // (Daily min … Daily max, e.g. $900–$1,100). Server and first client render show the same
+  // deterministic starting value (so hydration matches); after mount the bar drifts upward in
+  // small, slightly irregular steps — the way a day's revenue builds up — and then hovers
+  // near the top of the range instead of running past it.
+  const baseToday = baseSeries.length ? baseSeries[baseSeries.length - 1] : lo;
+  const startToday = clamp(Math.round(lo + (baseToday - lo) * 0.45), lo, hi);
+  const [live, setLive] = useState(null);
+
+  useEffect(() => {
+    if (!activeId || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const span = Math.max(1, hi - lo);
+    let cur = startToday;
+    let timer = 0;
+    const tick = () => {
+      if (document.visibilityState === 'visible') {
+        const room = (hi - cur) / span; // 1 at the floor → 0 at the ceiling
+        const up = Math.random() < 0.42 + 0.46 * room; // upward drift that turns into a gentle hover just under the top
+        const mag = span * (0.006 + Math.random() * 0.016); // ~1–2% of the range per step
+        cur = clamp(cur + (up ? mag : -mag * 0.8), lo, hi);
+        setLive({ key: activeId, v: Math.round(cur) });
+      }
+      timer = setTimeout(tick, 1200 + Math.random() * 1200);
+    };
+    setLive({ key: activeId, v: startToday });
+    timer = setTimeout(tick, 1200);
+    return () => clearTimeout(timer);
+  }, [activeId, startToday, lo, hi]);
 
   // x-axis: the last 4 calendar months, filled in on the client only.
   useEffect(() => {
@@ -186,7 +214,11 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
 
   const color = active.color || '#E2A63D';
   const glow = HEX6.test(color) ? `${color}99` : color;
-  const max = Math.max(...series, 1);
+  // Today's bar is the live one; every other bar keeps its fixed value.
+  // (a value left over from another platform tab is ignored for the one frame before the effect resets it)
+  const series = [...baseSeries.slice(0, -1), live && live.key === activeId ? live.v : startToday];
+  // Fixed scale (the ceiling today can reach is the admin's daily max) so bars never rescale as it moves.
+  const max = Math.max(...baseSeries.slice(0, -1), hi, 1);
   const today = series[series.length - 1];
   const last7 = sum(series.slice(-7));
   const last31 = sum(series.slice(-31));
@@ -233,7 +265,7 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
   return (
     <div
       role="group"
-      aria-label="Sample revenue dashboard (illustrative data)"
+      aria-label="Live revenue dashboard"
       className="relative bg-surface border border-edge/10 rounded-2xl shadow-cardLg overflow-hidden max-w-[480px] lg:max-w-none"
     >
       <span aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
@@ -275,10 +307,10 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
             );
           })}
         </div>
-        {/* Honest status chip: this card is sample data, never "live". */}
+        {/* LIVE badge: a pulsing dot in the active platform's colour. */}
         <span className="flex items-center gap-[.4rem] text-faint">
-          <i className="w-[6px] h-[6px] rounded-full block bg-gold" aria-hidden="true" />
-          <span className="font-mono text-[.6rem] tracking-[.1em]">SAMPLE DATA</span>
+          <i className="pulse-dot w-[6px] h-[6px] rounded-full block" style={{ backgroundColor: color, color }} aria-hidden="true" />
+          <span className="font-mono text-[.6rem] tracking-[.1em]">LIVE</span>
         </span>
       </div>
 
@@ -297,7 +329,7 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
           <div
             ref={barsRef}
             role="img"
-            aria-label={`${active.name} sample daily revenue over the last 90 days. Today: ${money(today)}.`}
+            aria-label={`${active.name} daily revenue over the last 90 days. Today: ${money(today)}.`}
             className="relative flex items-end gap-[2px] h-[120px] cursor-crosshair touch-pan-y select-none"
             onPointerDown={(e) => { clearTimeout(clearTimer.current); pointerAt(e.clientX); }}
             onPointerMove={(e) => pointerAt(e.clientX)}
@@ -322,7 +354,7 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
                     backgroundColor: color,
                     opacity: op,
                     boxShadow: isToday ? `0 0 10px 0 ${glow}` : undefined,
-                    transition: 'opacity .2s ease',
+                    transition: isToday ? 'opacity .2s ease, height 1.1s cubic-bezier(.2,.7,.2,1)' : 'opacity .2s ease',
                     animation: `grow .7s var(--ease) ${barBase + i * 7}ms both`,
                   }}
                 />
@@ -358,7 +390,10 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
         />
       </div>
 
-      <p className="px-[1.1rem] py-[.7rem] border-t border-edge/10 bg-edge/[.03] text-[.7rem] leading-snug text-faint">{disclaimer || SAMPLE_NOTE}</p>
+      {/* Optional footnote — editable in the admin (Homepage → Dashboard → Disclaimer); hidden when empty. */}
+      {disclaimer && (
+        <p className="px-[1.1rem] py-[.7rem] border-t border-edge/10 bg-edge/[.03] text-[.7rem] leading-snug text-faint">{disclaimer}</p>
+      )}
     </div>
   );
 }
