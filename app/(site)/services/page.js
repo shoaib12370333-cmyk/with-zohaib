@@ -1,9 +1,16 @@
 import { getContent } from '@/lib/db';
 import ServicesContent from '@/components/pages/ServicesContent';
 
-export const metadata = { title: 'Services — E-Commerce With Zohaib' };
+export async function generateMetadata() {
+  const c = await getContent();
+  return {
+    title: 'Services',
+    description: c.pageHeaders.services.lead,
+    alternates: { canonical: '/services' },
+    openGraph: { url: '/services', title: `Services — ${c.brand.name} ${c.brand.sub}`, description: c.pageHeaders.services.lead },
+  };
+}
 
 export default async function ServicesPage() {
-  const content = await getContent();
-  return <ServicesContent content={content} />;
+  return <ServicesContent content={await getContent()} />;
 }

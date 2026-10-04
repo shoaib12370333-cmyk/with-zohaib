@@ -1,22 +1,27 @@
 import Link from 'next/link';
 import Icon from './Icons';
+import { waLink } from '@/lib/links';
 import Reveal from './Reveal';
 
-export default function CtaBanner({ eyebrow, title, description, ctaLabel = 'Book a Free Strategy Call', href = '/contact' }) {
+export default function CtaBanner({ eyebrow, title, description, brand }) {
   return (
-    <Reveal>
-      <div className="relative bg-gradient-to-br from-ink to-ink2 text-white rounded-[20px] px-6 sm:px-8 py-10 sm:py-16 text-center overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(50% 80% at 50% 0%, rgba(226,166,61,.15), transparent 70%)' }}
-        />
-        <span className="relative eyebrow eyebrow-dark">{eyebrow}</span>
-        <h2 className="relative text-[2.1rem] sm:text-[2.6rem] max-w-[16em] mx-auto mt-3">{title}</h2>
-        {description && <p className="relative text-[#B9C0D1] mt-4">{description}</p>}
-        <div className="relative flex justify-center mt-8">
-          <Link href={href} className="inline-flex items-center gap-2 bg-gold hover:bg-goldDeep text-ink font-display font-bold text-base px-8 py-[1.05em] rounded-full transition-all hover:-translate-y-0.5">
-            {ctaLabel} <Icon name="arrow" className="w-4 h-4" />
-          </Link>
+    <Reveal from="zoom" className="relative overflow-hidden rounded-[2rem] border border-gold/25 p-8 sm:p-14 text-center noise" style={{ background: 'linear-gradient(135deg, rgb(var(--surface2)), rgb(var(--surface)))' }}>
+      <div className="aurora">
+        <i className="w-[32rem] h-[32rem] bg-gold/30 -top-60 -left-20" />
+        <i className="w-[28rem] h-[28rem] bg-violet/25 -bottom-60 right-0" style={{ animationDelay: '-8s' }} />
+      </div>
+      <div className="grid-bg opacity-60" />
+      <div className="relative max-w-[720px] mx-auto">
+        <span className="eyebrow">{eyebrow}</span>
+        <h2 className="h-section mt-4">{title}</h2>
+        {description && <p className="lead mt-5 max-w-[56ch] mx-auto">{description}</p>}
+        <div className="mt-9 flex flex-wrap gap-3 justify-center">
+          <Link href="/contact" className="btn btn-primary">{brand?.bookCallLabel || 'Book Free Call'} <Icon name="arrow" className="w-4 h-4" /></Link>
+          {brand?.whatsapp && (
+            <a href={waLink(brand.whatsapp, "Hi, I'd like a free strategy call.")} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+              <Icon name="whatsapp" className="w-4 h-4" /> WhatsApp us
+            </a>
+          )}
         </div>
       </div>
     </Reveal>

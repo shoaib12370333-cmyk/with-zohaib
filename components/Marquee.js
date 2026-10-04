@@ -1,53 +1,24 @@
-// Logo-only cards are a fixed horizontal (landscape) box, smaller than the
-// original 160x96 size so the strip reads as a row of compact tiles.
-const CARD_W = 120;
-const CARD_H = 76;
-const CARD_PAD = 12;
-const MAX_LOGO_H = CARD_H - CARD_PAD * 2;
-const MAX_LOGO_W = CARD_W - CARD_PAD * 2;
-
-export default function Marquee({ label, items, speed = 26 }) {
-  const list = items && items.length ? items : [];
-  // Repeat generously (not just x2) so the strip never runs out of content on
-  // wide screens — as long as both halves below are identical, the -50%
-  // animation loop stays perfectly seamless no matter the repeat count.
-  const REPEATS = 6;
-  const repeated = Array.from({ length: REPEATS }, () => list).flat();
-
+// Logo wall. Uses an uploaded logo when present, otherwise a clean wordmark chip.
+export default function Marquee({ label, items = [] }) {
+  if (!items.length) return null;
+  const row = [...items, ...items];
   return (
-    <div className="marquee-wrap bg-paper border-y border-line py-5 overflow-hidden">
-      <p className="font-mono-eyebrow text-[.7rem] tracking-[.14em] text-slateSoft text-center mb-4">{label}</p>
-      <div className="marquee-track" style={{ animationDuration: `${speed}s` }}>
-        {repeated.map((item, i) => {
-          const hasName = item.name && item.name.trim().length > 0;
-          const logoOnly = item.logoUrl && !hasName;
-          // The card size never changes — the logo size slider only controls
-          // how much of that fixed card the logo fills (capped at the card's
-          // padded content area so it can never grow the box).
-          const requestedLogoH = item.logoSize || (logoOnly ? 48 : 24);
-          const logoH = Math.min(requestedLogoH, MAX_LOGO_H);
-          return (
-            <span
-              key={i}
-              style={logoOnly ? { width: CARD_W, height: CARD_H, padding: CARD_PAD } : undefined}
-              className={`font-display font-extrabold text-[1.1rem] text-ink whitespace-nowrap flex items-center justify-center gap-3 flex-none border-[1.5px] border-line rounded-lg bg-white shadow-sm mr-3 box-border ${
-                logoOnly ? '' : 'px-8 py-[.7rem] min-w-[160px]'
-              }`}
-            >
-              {item.logoUrl && (
+    <section aria-label={label} className="relative py-10 border-y border-edge/10 bg-bg2/60">
+      <p className="text-center font-mono text-[.7rem] tracking-[.2em] uppercase text-faint mb-7">{label}</p>
+      <div className="marquee-mask overflow-hidden">
+        <div className="marquee" style={{ '--speed': `${Math.max(20, items.length * 7)}s` }}>
+          {row.map((it, i) => (
+            <div key={`${it.name}-${i}`} aria-hidden={i >= items.length} className="mx-3 flex-none h-14 min-w-[10rem] px-7 rounded-2xl border border-edge/10 bg-surface/60 grid place-items-center">
+              {it.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={item.logoUrl}
-                  alt={item.name || ''}
-                  className="w-auto object-contain flex-none mx-auto"
-                  style={{ height: `${logoH}px`, maxWidth: `${MAX_LOGO_W}px` }}
-                />
+                <img src={it.logoUrl} alt={it.name} loading="lazy" decoding="async" className="max-h-8 max-w-[8rem] object-contain" />
+              ) : (
+                <span className="font-display font-bold text-lg tracking-tight text-muted">{it.name}</span>
               )}
-              {hasName && item.name}
-            </span>
-          );
-        })}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

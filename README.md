@@ -1,78 +1,78 @@
-# E-Commerce With Zohaib — Website + Admin Panel
+# E-Commerce With Zohaib — Website + Admin
 
-A Next.js site with a database-backed admin panel. Everything on the public
-site (text, images, platform chart data) is editable from `/admin` once
-deployed — no code changes needed for day-to-day updates.
+A fast, SEO-ready Next.js 16 site with a database-backed admin panel. Everything on the
+public site — text, images, services, FAQs, blog — is editable from `/admin` with no code changes.
 
 ## What's inside
 
-- **Public site**: Home, About, Services, Contact — all content loaded from the database
-- **Admin panel** (`/admin`): password-protected editor for every section of the site, plus image uploads
-- **Live platform chart**: clicking eBay / Amazon / Shopify / TikTok Shop on the homepage switches the chart and stats — all editable from the admin panel
-- **Contact form**: submissions are saved to the database (visible via your database dashboard; a "view messages" admin screen can be added later if useful)
+**Public site**
+- Home, About, Services (+ a detail page per service), Blog, Contact, Privacy
+- "Midnight Aurora" design system: dark / light mode, animated aurora hero, bento service grid,
+  scroll reveals, count-up stats, cursor spotlight cards, command palette (`Ctrl/⌘ K`)
+- **Platform Match quiz** — a 3-question lead qualifier that recommends a starting platform
+- Sample revenue dashboard (clearly labelled as illustrative data)
+- Contact form with validation, honeypot, rate-limit, no-JS fallback and WhatsApp hand-off
+- SEO: per-page metadata, canonical URLs, Open Graph / Twitter cards (auto-generated share image),
+  `sitemap.xml`, `robots.txt`, web manifest, JSON-LD (Organization, FAQ, Service, Article, Breadcrumbs)
+- Accessible: skip link, focus rings, reduced-motion support, semantic landmarks
+
+**Admin (`/admin`)**
+- **Dashboard** — lead stats, 14-day chart, setup checklist
+- **Site content** — schema-driven editor: add a field to `lib/defaultContent.js` and the form appears
+  automatically (image uploads, icon picker, colour picker, reorderable lists)
+- **Version history** — last 30 saves, one-click restore
+- **Blog manager** — Markdown editor with live preview, drafts, scheduled publishing, cover images
+- **Leads inbox** — status workflow (new / read / replied / archived), search, CSV export
+- **Brand & SEO**, **Sections** (show/hide features, announcement bar)
+- **Security** — optional TOTP two-factor login
+
+**Security**
+- Login rate-limit, constant-time password check, `SameSite=Strict` session cookie, origin checks on all mutations
+- Uploads verified by real file signature (PNG/JPG/WebP/GIF/AVIF only), 8 MB limit
+- Security headers (HSTS, frame, referrer, permissions); admin never cached or indexed
+- `SESSION_SECRET` is **required** in production (no insecure fallback)
 
 ## Tech stack
+Next.js 16 (App Router, ISR) · Tailwind CSS 3 · Neon Postgres · Vercel Blob · Vercel Analytics · `jose` (sessions)
 
-- Next.js 16 (App Router)
-- Neon Postgres (via Vercel's Postgres integration) — stores all site content and contact form messages
-- Vercel Blob — stores uploaded images
-- Password-based admin login (signed cookie session, no separate user database)
+## Deploy to Vercel
 
-## Deploy to Vercel — step by step
+1. Push this repo to GitHub and import it in Vercel.
+2. **Storage → Create Database → Postgres (Neon)** → Connect to project (adds `DATABASE_URL`).
+3. **Storage → Create Database → Blob** → Connect to project (adds `BLOB_READ_WRITE_TOKEN`).
+4. **Settings → Environment Variables** — add:
+   - `ADMIN_PASSWORD` — what you type at `/admin/login`
+   - `SESSION_SECRET` — long random string (`openssl rand -base64 32`)
+   - `SITE_URL` — e.g. `https://ecommercewithzohaib.com`
+5. Redeploy, open `/admin/login`, and upload your photos under **Brand & SEO**.
 
-### 1. Push this code to GitHub
-```
-cd ecommerce-with-zohaib
-git init
-git add -A
-git commit -m "Initial commit"
-```
-Create a new empty repository on GitHub, then:
-```
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
-git branch -M main
-git push -u origin main
-```
+Tables are created automatically on first request. Existing content saved by the previous version
+is kept and merged with the new defaults.
 
-### 2. Import the project into Vercel
-1. Go to vercel.com → **Add New → Project**
-2. Select the GitHub repo you just pushed
-3. Click **Deploy** (it will fail on the first try — that's expected, because the database and admin password aren't set up yet. Continue to step 3.)
+### Optional upgrades
+| Variable | What it does |
+| --- | --- |
+| `RESEND_API_KEY` + `NOTIFY_EMAIL` (+ `NOTIFY_FROM`) | Email you every new lead |
+| `NOTIFY_WEBHOOK_URL` | Post every lead to Slack / Discord |
+| `ADMIN_TOTP_SECRET` | Require a 6-digit authenticator code at login (generate it on `/admin/security`) |
 
-### 3. Add a database
-1. In your Vercel project → **Storage** tab → **Create Database** → choose **Postgres** (powered by Neon)
-2. Once created, click **Connect to Project** and select this project
-   This automatically adds the `DATABASE_URL` environment variable for you.
-
-### 4. Add image storage
-1. Still in **Storage** → **Create Database** → choose **Blob**
-2. **Connect to Project** the same way — this adds `BLOB_READ_WRITE_TOKEN` automatically
-
-### 5. Set your admin password
-1. Go to **Settings → Environment Variables**
-2. Add `ADMIN_PASSWORD` = a password of your choice (this is what you'll type at `/admin/login`)
-3. Add `SESSION_SECRET` = any long random string (used to sign your login session — for example, run `openssl rand -base64 32` on your computer's terminal, or just mash the keyboard for 40+ characters)
-
-### 6. Redeploy
-Go to **Deployments** → click the three dots on the latest deployment → **Redeploy**.
-Your site is now live at the `.vercel.app` URL Vercel gives you (or your own domain, if you connect one under **Settings → Domains**).
-
-### 7. Log in and finish setup
-1. Visit `yoursite.com/admin/login` and log in with the `ADMIN_PASSWORD` you set
-2. Upload Zohaib's two photos under **Brand** (header photo + About page photo) — these didn't carry over automatically and need to be re-uploaded once here
-3. Double check the WhatsApp number, email, and any other details
-4. Click **Save Changes**
-
-## Running it on your own computer (optional, for testing)
-
+## Local development
 ```
 npm install
-cp .env.example .env.local   # then fill in the values
+cp .env.example .env.local   # fill in what you have
 npm run dev
 ```
-Without `DATABASE_URL` set, the site still runs using built-in default content (read-only) — this is only for previewing the design locally, not for real editing.
+Without `DATABASE_URL` the site runs on built-in default content (read-only) — handy for previewing the design.
+
+## Project map
+```
+app/(site)/…        public pages        app/admin/…      admin UI
+app/api/…           contact + admin     lib/defaultContent.js  all editable content & its schema
+components/…        UI components       lib/db.js        Postgres, rate limits, versions, posts
+```
 
 ## Notes
-
-- There is no "forgot password" flow — if you forget `ADMIN_PASSWORD`, just change it in Vercel's Environment Variables and redeploy.
-- The contact form currently just saves messages to the database. If you'd like an email or WhatsApp notification every time someone submits the form, that can be added.
+- Testimonials in `defaultContent.js` are placeholders — replace them with real, permissioned client feedback.
+- The sample dashboard uses illustrative data; keep its disclaimer unless you swap in real numbers.
+- `lib/seedPosts.js` holds three starter articles inserted once; edit or delete them in `/admin/posts`.
+- `/privacy` is a general template, not legal advice — have it reviewed for your jurisdiction.
