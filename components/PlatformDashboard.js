@@ -28,6 +28,15 @@ function buildSeries(chart, key, lo, hi) {
   });
 }
 
+// Content saved by older versions of the admin has no per-platform "color" — fall back to each
+// marketplace's real brand colour (matched by key or name) instead of one gold for everything.
+const BRAND_COLORS = { ebay: '#3B82F6', amazon: '#FF9900', shopify: '#95BF47', tiktokshop: '#FE2C55', tiktok: '#FE2C55' };
+function platformColor(p) {
+  if (p?.color && String(p.color).trim()) return p.color;
+  const k = String(p?.key || p?.name || '').toLowerCase().replace(/[^a-z]/g, '');
+  return BRAND_COLORS[k] || '#E2A63D';
+}
+
 const money = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -212,7 +221,7 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
 
   if (!active) return null;
 
-  const color = active.color || '#E2A63D';
+  const color = platformColor(active);
   const glow = HEX6.test(color) ? `${color}99` : color;
   // Today's bar is the live one; every other bar keeps its fixed value.
   // (a value left over from another platform tab is ignored for the one frame before the effect resets it)
@@ -287,7 +296,7 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
           )}
           {list.map((p) => {
             const on = p.key === active.key;
-            const c = p.color || '#E2A63D';
+            const c = platformColor(p);
             return (
               <button
                 key={p.key}

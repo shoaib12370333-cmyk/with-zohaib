@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Icon from './Icons';
 import Reveal from './Reveal';
 import { waLink } from '@/lib/links';
+import { slugifyService } from '@/lib/seo';
 
 const SOCIALS = [
   ['instagram', 'insta', 'Instagram'],
@@ -80,7 +81,7 @@ export default function Footer({ content }) {
             <h4 className={COL_TITLE}>Services</h4>
             <ul className="space-y-[.7rem] text-[.92rem]">
               {services.map((s) => (
-                <li key={s.slug}><Link href={`/services/${s.slug}`} className={LINK}>{s.title}</Link></li>
+                <li key={s.slug || s.title}><Link href={`/services/${s.slug || slugifyService(s.title)}`} className={LINK}>{s.title}</Link></li>
               ))}
             </ul>
           </Reveal>

@@ -1,4 +1,5 @@
 import Reveal from './Reveal';
+import MarqueeLogo from './MarqueeLogo';
 
 // Platform / logo strip. Uses an uploaded logo when present, otherwise the name
 // in Archivo extrabold — white cards on a paper band, like the original.
@@ -40,22 +41,17 @@ export default function Marquee({ label, items = [] }) {
               <li
                 key={i}
                 aria-hidden={dupe ? 'true' : undefined}
-                // The CARD stays the same size; only the picture inside grows. A logo-only
-                // card drops the wide side padding so the logo can fill the card instead.
-                className={`group mx-2.5 flex h-[4.25rem] min-w-[9.5rem] flex-none items-center justify-center gap-3 whitespace-nowrap rounded-xl border-[1.5px] border-line bg-white ${logoOnly ? 'px-3 py-1.5' : 'px-8'} font-display text-[1.1rem] font-extrabold text-ink shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gold/60 hover:shadow-card motion-reduce:my-1.5 ${dupe ? 'motion-reduce:hidden' : ''}`}
+                // The CARD stays the same size. A logo-only card has a FIXED width (so no logo can
+                // ever resize it or make the looping strip jump) with little padding; the picture
+                // inside is auto-fitted to fill it (see MarqueeLogo).
+                className={`group mx-2.5 flex h-[4.25rem] flex-none items-center justify-center gap-3 whitespace-nowrap rounded-xl border-[1.5px] border-line bg-white ${logoOnly ? 'w-[9.5rem] px-3 py-1.5' : 'min-w-[9.5rem] px-8'} font-display text-[1.1rem] font-extrabold text-ink shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gold/60 hover:shadow-card motion-reduce:my-1.5 ${dupe ? 'motion-reduce:hidden' : ''}`}
               >
                 {it.logoUrl && (
-                  // Eager on purpose: the track is `max-content` wide and moved by a
-                  // percentage, so a logo that loads late would widen its card and make
-                  // the whole strip jump. The fixed height + min width reserve its box.
-                  // Full colour at full opacity (no grey wash) so the logo reads sharp and clear.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <MarqueeLogo
                     src={it.logoUrl}
                     alt={hasName ? '' : it.name || ''}
-                    loading="eager"
-                    decoding="async"
-                    className={`w-auto flex-none object-contain transition-transform duration-300 group-hover:scale-110 ${logoOnly ? 'h-full max-h-[3.4rem] max-w-[8.75rem]' : 'h-11 max-w-[5.5rem]'}`}
+                    boxW={logoOnly ? 128 : 84}
+                    boxH={logoOnly ? 54 : 40}
                   />
                 )}
                 {hasName && it.name}
