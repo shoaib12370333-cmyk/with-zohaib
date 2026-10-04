@@ -57,7 +57,7 @@ export default function AdminShell({ children }) {
   );
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[250px_1fr]">
+    <div className="min-h-screen lg:grid lg:grid-cols-[250px_1fr] font-display">
       <aside className="hidden lg:flex flex-col gap-6 sticky top-0 h-screen p-5 border-r border-edge/10 bg-bg2">
         <Link href="/admin" className="px-2 pt-1">
           <div className="font-display font-bold">Admin</div>

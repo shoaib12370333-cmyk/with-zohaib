@@ -1,13 +1,14 @@
 import './globals.css';
-import { Sora, Inter, JetBrains_Mono } from 'next/font/google';
+import { Archivo, Source_Serif_4, IBM_Plex_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { getContent } from '@/lib/db';
 import { siteUrl } from '@/lib/seo';
 import PointerEffects from '@/components/PointerEffects';
 
-const display = Sora({ subsets: ['latin'], variable: '--font-display', display: 'swap', weight: ['500', '600', '700', '800'] });
-const body = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap', weight: ['400', '500'] });
+// The original brand typefaces: Archivo (headings), Source Serif 4 (body), IBM Plex Mono (labels).
+const display = Archivo({ subsets: ['latin'], variable: '--font-display', display: 'swap', weight: ['500', '600', '700', '800', '900'] });
+const body = Source_Serif_4({ subsets: ['latin'], variable: '--font-body', display: 'swap', weight: ['400', '500', '600'] });
+const mono = IBM_Plex_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap', weight: ['400', '500', '600'] });
 
 export async function generateMetadata() {
   const c = await getContent();
@@ -36,10 +37,7 @@ export async function generateMetadata() {
 }
 
 export const viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#060912' },
-    { media: '(prefers-color-scheme: light)', color: '#f6f7fc' },
-  ],
+  themeColor: '#0A0F1E',
   width: 'device-width',
   initialScale: 1,
 };

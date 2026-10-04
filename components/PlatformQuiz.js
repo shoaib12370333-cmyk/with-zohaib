@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Icon from './Icons';
 
@@ -42,17 +42,55 @@ const WHY = {
   'TikTok Shop': 'Discovery happens through content, which suits visual, impulse-friendly products.',
 };
 
+// Steps slide in from the side you are travelling towards (--dx), options follow
+// one after another. `backwards` fill keeps hover transforms working afterwards.
+// Reduced motion is flattened globally in globals.css.
+const KEYFRAMES =
+  '@keyframes qzIn{from{opacity:0;transform:translate3d(var(--dx,28px),0,0)}}' +
+  '.qz-in{animation:qzIn .55s var(--ease) backwards}';
+
+const CONFIRM_MS = 280; // how long the chosen option stays highlighted before the next step
+
 export default function PlatformQuiz() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState([]);
+  const [dir, setDir] = useState(1); // 1 = moving forward, -1 = going back
+  const [picked, setPicked] = useState(null); // label of the option being confirmed
+  const timer = useRef(0);
+  const heading = useRef(null);
+  const shownStep = useRef(0);
 
   const done = step >= QUESTIONS.length;
 
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  // After a step change, move keyboard / screen-reader focus to the new heading
+  // (the button that was just pressed has been unmounted). Never on first render.
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    heading.current?.focus({ preventScroll: true });
+  }, [step]);
+
   const pick = (opt) => {
-    setAnswers((a) => [...a, opt]);
-    setStep((s) => s + 1);
+    if (picked) return;
+    const advance = () => {
+      setDir(1);
+      setAnswers((a) => [...a, opt]);
+      setStep((s) => s + 1);
+      setPicked(null);
+    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { advance(); return; }
+    setPicked(opt.label);
+    timer.current = window.setTimeout(advance, CONFIRM_MS);
   };
-  const reset = () => { setAnswers([]); setStep(0); };
+  const back = () => {
+    if (picked) return;
+    setDir(-1);
+    setAnswers((a) => a.slice(0, -1));
+    setStep((s) => s - 1);
+  };
+  const reset = () => { setDir(-1); setAnswers([]); setStep(0); };
 
   let result = null;
   if (done) {
@@ -63,62 +101,96 @@ export default function PlatformQuiz() {
   }
 
   return (
-    <div id="quiz" className="card relative overflow-hidden p-6 sm:p-10 max-w-[860px] mx-auto">
-      <div className="aurora"><i className="w-72 h-72 bg-gold/20 -top-24 -right-16" /></div>
-      <div className="relative">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex gap-1.5" aria-hidden="true">
-            {QUESTIONS.map((_, i) => (
-              <span key={i} className={`h-1.5 w-10 rounded-full transition-all duration-500 ${i < step ? 'bg-gold' : i === step && !done ? 'bg-gold/50' : 'bg-edge/15'}`} />
-            ))}
-          </div>
-          <span className="font-mono text-xs text-faint">{done ? 'Your match' : `Question ${step + 1} of ${QUESTIONS.length}`}</span>
-        </div>
+    <div id="quiz" className="relative mx-auto max-w-[860px] overflow-hidden rounded-[20px] border border-edge/10 bg-surface p-6 shadow-card sm:p-10">
+      <style>{KEYFRAMES}</style>
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-gold via-gold2 to-teal" />
 
+      <div className="mb-8 flex items-center justify-between gap-4">
+        {/* each segment fills like a progress bar as you answer */}
+        <div className="flex gap-1.5" aria-hidden="true">
+          {QUESTIONS.map((_, i) => {
+            const fill = i < step ? 1 : i === step && !done ? (picked ? 0.75 : 0.3) : 0;
+            return (
+              <span key={i} className="h-1.5 w-10 overflow-hidden rounded-full bg-edge/10">
+                <span
+                  className="block h-full origin-left rounded-full bg-gold transition-transform duration-700 ease-[cubic-bezier(.2,.7,.2,1)]"
+                  style={{ transform: `scaleX(${fill})` }}
+                />
+              </span>
+            );
+          })}
+        </div>
+        <span className="font-mono text-xs text-muted">{done ? 'Your match' : `Question ${step + 1} of ${QUESTIONS.length}`}</span>
+      </div>
+
+      <div key={step} className="min-h-[18rem]" style={{ '--dx': `${dir * 28}px` }}>
         {!done ? (
-          <div key={step} className="animate-rise">
-            <h3 className="text-[1.6rem] sm:text-[2rem]">{QUESTIONS[step].q}</h3>
+          <>
+            <h3 ref={heading} tabIndex={-1} className="qz-in text-[1.6rem] outline-none sm:text-[2rem]">{QUESTIONS[step].q}</h3>
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
-              {QUESTIONS[step].options.map((o) => (
-                <button
-                  key={o.label}
-                  onClick={() => pick(o)}
-                  className="group text-left rounded-2xl border border-edge/12 bg-bg2/50 hover:border-gold/60 hover:bg-gold/[.07] p-5 transition-all hover:-translate-y-0.5 flex items-center justify-between gap-4"
-                >
-                  <span className="font-display font-medium">{o.label}</span>
-                  <Icon name="arrow" className="w-4 h-4 flex-none text-faint group-hover:text-gold group-hover:translate-x-1 transition-all" />
-                </button>
-              ))}
+              {QUESTIONS[step].options.map((o, i) => {
+                const chosen = picked === o.label;
+                return (
+                  <button
+                    key={o.label}
+                    type="button"
+                    onClick={() => pick(o)}
+                    style={{ animationDelay: `${120 + i * 70}ms` }}
+                    className={`qz-in group flex items-center justify-between gap-4 rounded-xl border-[1.5px] p-5 text-left transition duration-300 active:scale-[.985] ${
+                      chosen
+                        ? 'border-gold bg-gold text-ink shadow-card'
+                        : `border-edge/15 bg-surface hover:-translate-y-0.5 hover:border-gold hover:bg-gold/10 hover:shadow-card ${picked ? 'opacity-50' : ''}`
+                    }`}
+                  >
+                    <span className="font-display font-medium">{o.label}</span>
+                    <Icon
+                      name={chosen ? 'check' : 'arrow'}
+                      className={`h-4 w-4 flex-none transition duration-300 ${chosen ? 'scale-110' : 'text-faint group-hover:translate-x-1 group-hover:text-gold'}`}
+                    />
+                  </button>
+                );
+              })}
             </div>
             {step > 0 && (
-              <button onClick={() => { setAnswers((a) => a.slice(0, -1)); setStep((s) => s - 1); }} className="mt-6 text-sm text-muted hover:text-fg">← Back</button>
+              <button type="button" onClick={back} className="link-u mt-6 text-sm text-muted hover:text-fg">← Back</button>
             )}
-          </div>
+          </>
         ) : (
-          <div className="animate-rise">
-            <span className="chip border-gold/30 text-gold"><Icon name="spark" className="w-3.5 h-3.5" /> Suggested starting point</span>
-            <h3 className="mt-5 text-[2rem] sm:text-[2.6rem]">
-              Start with <span className="grad-text">{result.platform}</span>
-            </h3>
-            <p className="lead mt-4 max-w-[52ch]">{WHY[result.platform]}</p>
-            <div className="mt-6 grid sm:grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-edge/10 bg-bg2/50 p-4">
-                <div className="font-mono text-[.64rem] tracking-[.14em] uppercase text-faint">Best-fit service</div>
-                <div className="mt-1 font-display font-bold">{result.service}</div>
-              </div>
-              {result.alt && (
-                <div className="rounded-2xl border border-edge/10 bg-bg2/50 p-4">
-                  <div className="font-mono text-[.64rem] tracking-[.14em] uppercase text-faint">Worth comparing</div>
-                  <div className="mt-1 font-display font-bold">{result.alt}</div>
+          <div className="dz relative overflow-hidden rounded-2xl p-5 sm:p-8">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-[20%] -top-[40%] h-[110%] w-[70%] rounded-full"
+              style={{ background: 'radial-gradient(closest-side, rgba(226,166,61,.22), transparent 70%)', animation: 'glowDriftA 14s ease-in-out infinite' }}
+            />
+            <div className="relative">
+              <span className="chip border-gold/40 text-gold"><Icon name="spark" className="h-3.5 w-3.5" /> Suggested starting point</span>
+              <h3 ref={heading} tabIndex={-1} className="mt-5 text-[2rem] outline-none sm:text-[2.8rem]">
+                Start with{' '}
+                <span className="pop-in inline-block" style={{ animationDelay: '180ms' }}>
+                  <span className="grad-text">{result.platform}</span>
+                </span>
+              </h3>
+              <p className="lead qz-in mt-4 max-w-[52ch]" style={{ animationDelay: '260ms' }}>{WHY[result.platform]}</p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="qz-in rounded-xl border border-edge/10 bg-bg2 p-4" style={{ animationDelay: '340ms' }}>
+                  <div className="font-mono text-[.64rem] uppercase tracking-[.14em] text-faint">Best-fit service</div>
+                  <div className="mt-1 font-display font-bold">{result.service}</div>
                 </div>
-              )}
-            </div>
-            <p className="mt-5 text-xs text-faint">A quick guide, not a guarantee — we'll confirm the right choice with you on a free call.</p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href={`/contact?interest=${encodeURIComponent(result.platform)}&from=quiz`} className="btn btn-primary">
-                Talk it through — free call <Icon name="arrow" className="w-4 h-4" />
-              </Link>
-              <button onClick={reset} className="btn btn-ghost">Retake quiz</button>
+                {result.alt && (
+                  <div className="qz-in rounded-xl border border-edge/10 bg-bg2 p-4" style={{ animationDelay: '420ms' }}>
+                    <div className="font-mono text-[.64rem] uppercase tracking-[.14em] text-faint">Worth comparing</div>
+                    <div className="mt-1 font-display font-bold">{result.alt}</div>
+                  </div>
+                )}
+              </div>
+              <p className="qz-in mt-5 text-xs text-faint" style={{ animationDelay: '500ms' }}>A quick guide, not a guarantee — we'll confirm the right choice with you on a free call.</p>
+              <div className="qz-in mt-7 flex flex-wrap gap-3" style={{ animationDelay: '560ms' }}>
+                {/* label may wrap on narrow phones; the arrow must never be squeezed out */}
+                <Link href={`/contact?interest=${encodeURIComponent(result.platform)}&from=quiz`} className="btn btn-primary whitespace-normal px-6 text-center sm:whitespace-nowrap sm:px-8">
+                  Talk it through — free call <Icon name="arrow" className="h-4 w-4 flex-none" />
+                </Link>
+                <button type="button" onClick={reset} className="btn btn-ghost">Retake quiz</button>
+              </div>
             </div>
           </div>
         )}

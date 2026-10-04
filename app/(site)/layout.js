@@ -16,7 +16,10 @@ export default async function SiteLayout({ children }) {
   const showAnnouncement = vis.announcement !== false && content.announcement?.enabled;
 
   return (
-    <>
+    // `.classic` = the original white / paper / ink look (see globals.css). The
+    // admin panel keeps its own dark/light tokens because it lives outside this wrapper.
+    <div className="classic min-h-screen">
+      <style>{'html,body{background:#fff}'}</style>
       {showAnnouncement && <AnnouncementBar data={content.announcement} />}
       <Header brand={content.brand} showSearch={vis.commandPalette !== false} hasAnnouncement={!!showAnnouncement} />
       {children}
@@ -31,6 +34,6 @@ export default async function SiteLayout({ children }) {
         />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd(content)) }} />
-    </>
+    </div>
   );
 }
