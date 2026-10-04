@@ -4,8 +4,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 const DAYS = 90;
 const SAMPLE_NOTE = 'Illustrative sample data — not real client results.';
 
-// Deterministic pseudo-random so server and client render identical bars
-// (no Math.random anywhere in this file — the numbers never "tick").
+// Deterministic pseudo-random so server and client render identical bars.
+// (Math.random is only used inside the post-mount effect that animates today's bar.)
 function seeded(seed) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
@@ -155,7 +155,33 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
   const lo = Number.isFinite(active?.dailyMin) ? active.dailyMin : 30;
   const hiRaw = Number.isFinite(active?.dailyMax) ? active.dailyMax : 220;
   const hi = hiRaw > lo ? hiRaw : lo + 1;
-  const series = useMemo(() => (active ? buildSeries(active.chart, active.key || 'x', lo, hi) : []), [active, lo, hi]);
+  const baseSeries = useMemo(() => (active ? buildSeries(active.chart, active.key || 'x', lo, hi) : []), [active, lo, hi]);
+
+  // "Live" today bar. Server and first client render show the same deterministic starting
+  // value (so hydration matches); after mount the bar creeps upward in small, slightly
+  // irregular steps — the way a day's revenue builds up — and settles near its ceiling.
+  const baseToday = baseSeries.length ? baseSeries[baseSeries.length - 1] : lo;
+  const startToday = Math.max(lo, Math.round(baseToday * 0.72));
+  const capToday = Math.max(startToday + 1, Math.min(hi, Math.round(baseToday * 1.1)));
+  const [live, setLive] = useState(null);
+
+  useEffect(() => {
+    if (!activeId || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let cur = startToday;
+    let timer = 0;
+    const tick = () => {
+      if (document.visibilityState === 'visible') {
+        const step = (capToday - startToday) * (0.03 + Math.random() * 0.04); // 3–7% of the climb
+        const dip = Math.random() < 0.12; // the odd small pull-back keeps it believable
+        cur = clamp(cur + (dip ? -step * 0.35 : step), startToday, capToday);
+        setLive({ key: activeId, v: Math.round(cur) });
+      }
+      timer = setTimeout(tick, 1200 + Math.random() * 1200);
+    };
+    setLive({ key: activeId, v: startToday });
+    timer = setTimeout(tick, 1200);
+    return () => clearTimeout(timer);
+  }, [activeId, startToday, capToday]);
 
   // x-axis: the last 4 calendar months, filled in on the client only.
   useEffect(() => {
@@ -186,7 +212,11 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
 
   const color = active.color || '#E2A63D';
   const glow = HEX6.test(color) ? `${color}99` : color;
-  const max = Math.max(...series, 1);
+  // Today's bar is the live one; every other bar keeps its fixed sample value.
+  // (a value left over from another platform tab is ignored for the one frame before the effect resets it)
+  const series = [...baseSeries.slice(0, -1), live && live.key === activeId ? live.v : startToday];
+  // Fixed scale (includes the ceiling today can reach) so bars never rescale while it climbs.
+  const max = Math.max(...baseSeries.slice(0, -1), capToday, 1);
   const today = series[series.length - 1];
   const last7 = sum(series.slice(-7));
   const last31 = sum(series.slice(-31));
@@ -275,10 +305,11 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
             );
           })}
         </div>
-        {/* Honest status chip: this card is sample data, never "live". */}
+        {/* LIVE badge: a pulsing dot in the active platform's colour. The disclaimer line at the
+            bottom of the card still states the figures are illustrative. */}
         <span className="flex items-center gap-[.4rem] text-faint">
-          <i className="w-[6px] h-[6px] rounded-full block bg-gold" aria-hidden="true" />
-          <span className="font-mono text-[.6rem] tracking-[.1em]">SAMPLE DATA</span>
+          <i className="pulse-dot w-[6px] h-[6px] rounded-full block" style={{ backgroundColor: color, color }} aria-hidden="true" />
+          <span className="font-mono text-[.6rem] tracking-[.1em]">LIVE</span>
         </span>
       </div>
 
@@ -322,7 +353,7 @@ export default function PlatformDashboard({ platforms = [], disclaimer }) {
                     backgroundColor: color,
                     opacity: op,
                     boxShadow: isToday ? `0 0 10px 0 ${glow}` : undefined,
-                    transition: 'opacity .2s ease',
+                    transition: isToday ? 'opacity .2s ease, height 1.1s cubic-bezier(.2,.7,.2,1)' : 'opacity .2s ease',
                     animation: `grow .7s var(--ease) ${barBase + i * 7}ms both`,
                   }}
                 />
