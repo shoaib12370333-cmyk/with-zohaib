@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Icon from './Icons';
 import Reveal from './Reveal';
 import { waLink } from '@/lib/links';
+import { cleanReviews } from '@/lib/reviews';
 import { slugifyService } from '@/lib/seo';
 
 const SOCIALS = [
@@ -25,6 +26,7 @@ export default function Footer({ content }) {
   const brand = content?.brand || {};
   const year = new Date().getFullYear();
   const wa = waLink(brand.whatsapp);
+  const hasReviews = cleanReviews(content?.reviews).length > 0;
   const services = (content?.servicesOverview || []).slice(0, 6);
   const socials = SOCIALS.filter(([key]) => /^https?:/i.test(brand[key] || ''));
   const hours = content?.contact?.hours;
@@ -71,7 +73,7 @@ export default function Footer({ content }) {
           <Reveal as="nav" aria-label="Footer">
             <h4 className={COL_TITLE}>Quick Links</h4>
             <ul className="space-y-[.7rem] text-[.92rem]">
-              {QUICK_LINKS.map(([href, label]) => (
+              {(hasReviews ? [...QUICK_LINKS.slice(0, 4), ['/reviews', 'Reviews'], QUICK_LINKS[4]] : QUICK_LINKS).map(([href, label]) => (
                 <li key={href}><Link href={href} className={LINK}>{label}</Link></li>
               ))}
             </ul>

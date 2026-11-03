@@ -6,7 +6,7 @@ import { TextInput, TextArea, NumberInput, Toggle, ColorInput, IconPicker, Image
 // Schema-driven editor: renders a form for ANY JSON value. The shape comes from
 // lib/defaultContent.js, so new content fields appear here automatically.
 
-const LONG_KEYS = /^(description|lead|quote|a|bio|body|blurb|text|caption|message|tagline|title|heading)$/i;
+const LONG_KEYS = /^(description|lead|quote|a|bio|body|blurb|text|caption|message|tagline|title|heading|response)$/i;
 
 function blank(template) {
   if (Array.isArray(template)) return [];
@@ -121,7 +121,7 @@ export function Node({ label, value, onChange, fieldKey = '' }) {
         {simple.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2">
             {simple.map(([k, v]) => {
-              const wide = typeof v === 'string' && (LONG_KEYS.test(k) && (v.length > 60 || /^(description|lead|quote|a|bio|body|text|message)$/i.test(k)));
+              const wide = typeof v === 'string' && (LONG_KEYS.test(k) && (v.length > 60 || /^(description|lead|quote|a|bio|body|text|message|response)$/i.test(k)));
               const media = typeof v === 'string' && /Url$/.test(k);
               return (
                 <div key={k} className={wide || media ? 'sm:col-span-2' : ''}>
@@ -148,7 +148,7 @@ export function Node({ label, value, onChange, fieldKey = '' }) {
   if (key === 'icon') return <IconPicker label={lbl} value={value} onChange={onChange} names={ICON_NAMES} />;
   if (/color/i.test(key) && /^#/.test(value || '#')) return <ColorInput label={lbl} value={value} onChange={onChange} />;
   if (/Url$/.test(key) && !/^(bookingUrl)$/.test(key)) return <ImageField label={lbl} value={value} onChange={onChange} />;
-  const long = LONG_KEYS.test(key) && ((value || '').length > 60 || /^(description|lead|quote|a|bio|body|text|message)$/i.test(key));
+  const long = LONG_KEYS.test(key) && ((value || '').length > 60 || /^(description|lead|quote|a|bio|body|text|message|response)$/i.test(key));
   if (long || (value || '').length > 90 || (value || '').includes('\n')) return <TextArea label={lbl} value={value} onChange={onChange} rows={Math.min(8, Math.max(3, Math.ceil((value || '').length / 80)))} />;
   return <TextInput label={lbl} value={value} onChange={onChange} />;
 }

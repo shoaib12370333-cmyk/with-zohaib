@@ -7,6 +7,12 @@ import { useToast } from '@/components/admin/Fields';
 
 const GROUPS = [
   { id: 'home', label: 'Homepage', keys: ['hero', 'platforms', 'marqueeItems', 'trustStripLabel', 'sectionLabels', 'servicesOverview', 'featureBlock', 'process', 'stats', 'dashboard', 'testimonials', 'faqs'] },
+  {
+    id: 'reviews',
+    label: 'Reviews',
+    keys: ['fiverr', 'reviews'],
+    hint: 'Paste the REAL reviews from your own Fiverr profile — one card per review (the name, country, rating, date and text exactly as the client wrote them). Reviews appear on the homepage and on /reviews as soon as you save; cards with no review text are ignored. Only add reviews that clients actually left for your work.',
+  },
   { id: 'about', label: 'About & values', keys: ['founder', 'values'] },
   { id: 'services', label: 'Services', keys: ['serviceCategories', 'coaching'] },
   { id: 'pages', label: 'Page headings & CTAs', keys: ['pageHeaders', 'ctaBanners'] },
@@ -43,6 +49,7 @@ export default function ContentPage() {
           </button>
         ))}
       </div>
+      {group.hint && <p className="mb-5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm leading-relaxed">{group.hint}</p>}
       <SchemaEditor content={content} keys={group.keys} onChange={setContent} />
       {toastNode}
     </SaveBar>

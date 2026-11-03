@@ -6,6 +6,8 @@ import FeatureBlock from '@/components/FeatureBlock';
 import ProcessSteps from '@/components/ProcessSteps';
 import StatsBand from '@/components/StatsBand';
 import Testimonials from '@/components/Testimonials';
+import FiverrReviews from '@/components/FiverrReviews';
+import { cleanReviews } from '@/lib/reviews';
 import PlatformQuiz from '@/components/PlatformQuiz';
 import Faq from '@/components/Faq';
 import BlogCard from '@/components/BlogCard';
@@ -28,6 +30,8 @@ export default function HomeContent({ content, posts = [] }) {
   const sl = content.sectionLabels;
   const brand = content.brand || {};
   const blogPosts = vis.blogPreview !== false ? posts.slice(0, 3) : [];
+  // Real client reviews (pasted from Fiverr in the admin). When there are none the older testimonials show instead.
+  const reviews = cleanReviews(content.reviews);
 
   // Page rhythm (as in the original): dark hero → paper marquee strip → then the
   // light sections alternate white / paper, with the stats band as the one dark
@@ -99,8 +103,17 @@ export default function HomeContent({ content, posts = [] }) {
 
       {tone.stories && (
         <Band tone={tone.stories}>
-          <SectionHeading {...sl.successStories} />
-          <Testimonials items={content.testimonials} />
+          {reviews.length > 0 ? (
+            <>
+              <SectionHeading {...(sl.reviews || sl.successStories)} />
+              <FiverrReviews reviews={reviews} fiverr={content.fiverr} brand={brand} limit={6} showAllHref="/reviews" />
+            </>
+          ) : (
+            <>
+              <SectionHeading {...sl.successStories} />
+              <Testimonials items={content.testimonials} />
+            </>
+          )}
         </Band>
       )}
 
